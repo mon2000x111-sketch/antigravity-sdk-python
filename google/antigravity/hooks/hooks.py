@@ -167,7 +167,15 @@ class PostToolCallHook(InspectHook):
 
 
 class OnToolErrorHook(TransformHook):
-  """Invoked when a tool fails, allowing for recovery or modification."""
+  """Invoked when a tool fails, allowing for recovery or modification.
+
+  Receives the raised exception and returns the error representation that
+  the model should see. If the hook returns None, the harness uses its
+  default error formatting instead.
+
+  The hook cannot fix or retry the tool call on its own, but it can guide
+  the agent toward a specific resolution.
+  """
 
   pass
 

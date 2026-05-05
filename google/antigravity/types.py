@@ -307,14 +307,18 @@ class ToolResult(pydantic.BaseModel):
       Connection-provided tools, or a string for custom host-side tools.
     result: The tool's return value. Can be any JSON-serializable value.
     error: An error message if execution failed, or None on success.
+    exception: The original exception if execution failed. Not serialized.
   """
 
-  model_config = pydantic.ConfigDict(extra="ignore")
+  model_config = pydantic.ConfigDict(
+      extra="ignore", arbitrary_types_allowed=True
+  )
 
   name: BuiltinTools | str
   id: str | None = None
   result: Any = None
   error: str | None = None
+  exception: Exception | None = pydantic.Field(default=None, exclude=True)
 
 
 PythonTool = Callable[..., Any]

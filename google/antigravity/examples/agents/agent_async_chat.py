@@ -162,10 +162,16 @@ class AsyncChatRoom:
     Agent is stateful and already has prior context, so we only inject
     messages from other agents that arrived since this agent's last turn.
 
+    Args:
+      unseen: List of (sender, text) tuples the agent hasn't processed.
+
     Security note: this concatenates raw agent responses into the prompt.
     An agent could craft output that manipulates subsequent agents. A
     production implementation should use structured content or delimiter-
     based formatting to reduce prompt-injection risk.
+
+    Returns:
+      A prompt string containing only the unseen messages.
     """
     lines = [f"[{sender}]: {text}" for sender, text in unseen]
     return (
@@ -214,7 +220,7 @@ _AGENT_CONFIGS = {
 }
 
 
-async def main():
+async def main() -> None:
   logging.basicConfig(level=logging.WARNING)
   print("🏠 Async Agent Chat (no rounds)\n")
 

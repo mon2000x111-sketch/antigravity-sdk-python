@@ -165,7 +165,9 @@ class ToolRunner:
       except Exception as e:  # pylint: disable=broad-except
         results.append(
             types.ToolResult(
-                name=tc.name, error=f"Error executing tool '{tc.name}': {e}"
+                name=tc.name,
+                error=f"Error executing tool '{tc.name}': {e}",
+                exception=e,
             )
         )
     return results

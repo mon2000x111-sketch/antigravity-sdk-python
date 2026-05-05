@@ -204,7 +204,7 @@ _AGENT_CONFIGS = {
 }
 
 
-async def main():
+async def main() -> None:
   logging.basicConfig(level=logging.WARNING)
   print("🏠 Agent Chat Room\n")
 

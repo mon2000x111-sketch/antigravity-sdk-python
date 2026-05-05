@@ -362,6 +362,57 @@ class ProcessToolCallsTest(absltest.TestCase):
     self.assertLen(results, 1)
     self.assertEqual(results[0].result, 10)
 
+  def test_failing_tool_preserves_original_exception(self):
+    """Verifies that a tool's original exception is preserved on ToolResult.
+
+    What: Checks that ToolResult.exception holds the original exception object.
+    Why: OnToolErrorHook needs the original exception type for isinstance
+      dispatch (b/508736962).
+    How: Processes a call to a tool that raises ValueError and asserts the
+      exception field is the original ValueError instance.
+    """
+
+    def _typed_error_tool():
+      raise ValueError("bad input")
+
+    runner = tool_runner.ToolRunner([_typed_error_tool])
+    results = asyncio.run(
+        runner.process_tool_calls(
+            [sdk_types.ToolCall(name="_typed_error_tool", args={})]
+        )
+    )
+    self.assertLen(results, 1)
+    self.assertIsNotNone(results[0].exception)
+    self.assertIsInstance(results[0].exception, ValueError)
+    self.assertIn("bad input", str(results[0].exception))
+
+  def test_exception_excluded_from_serialization(self):
+    """Verifies that ToolResult.exception is not included in model_dump.
+
+    Why: Exception objects are not JSON-serializable; they must be excluded
+      from Pydantic serialization while remaining accessible in-memory.
+    """
+    result = sdk_types.ToolResult(
+        name="test",
+        error="something broke",
+        exception=ValueError("original"),
+    )
+    dumped = result.model_dump()
+    self.assertNotIn("exception", dumped)
+    # But the in-memory object still has it.
+    self.assertIsInstance(result.exception, ValueError)
+
+  def test_successful_tool_has_no_exception(self):
+    """Verifies that successful tool calls have exception=None."""
+    runner = tool_runner.ToolRunner([_async_tool])
+    results = asyncio.run(
+        runner.process_tool_calls(
+            [sdk_types.ToolCall(name="_async_tool", args={"x": 1, "y": 2})]
+        )
+    )
+    self.assertLen(results, 1)
+    self.assertIsNone(results[0].exception)
+
 
 if __name__ == "__main__":
   absltest.main()

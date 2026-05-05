@@ -816,7 +816,7 @@ class LocalConnection(connection.Connection):
         result.id = tool_call.id
         # ToolRunner may catch exceptions internally and set result.error.
         if result.error:
-          tool_error = RuntimeError(result.error)
+          tool_error = result.exception or RuntimeError(result.error)
       except Exception as e:  # pylint: disable=broad-except
         tool_error = e
         result = types.ToolResult(

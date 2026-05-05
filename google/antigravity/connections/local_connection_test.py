@@ -2197,6 +2197,55 @@ class LocalConnectionToolCallHooksTest(unittest.IsolatedAsyncioTestCase):
     self.assertIn("toolResponse", sent_data)
     self.assertIn("recovered_value", sent_data["toolResponse"]["responseJson"])
 
+  async def test_on_tool_error_hook_receives_original_exception_type(self):
+    """Verifies OnToolErrorHook receives the original exception, not wrapped.
+
+    Regression test for b/508736962: the hook should receive the original
+    ValueError (not a RuntimeError wrapping the error string) so that
+    isinstance-based dispatch works in hook implementations.
+    """
+    captured_errors = []
+
+    class CapturingErrorHook:
+
+      async def run(self, context, data):  # pylint: disable=unused-argument
+        captured_errors.append(data)
+        return "recovered"
+
+    tr = tool_runner.ToolRunner()
+
+    async def value_error_tool(**kwargs):
+      raise ValueError("bad input")
+
+    tr.register(value_error_tool, "value_error_tool")
+
+    hr = hook_runner.HookRunner()
+    hr.on_tool_error_hooks.append(CapturingErrorHook())
+
+    local_connection.LocalConnection(
+        process=self.mock_process,
+        ws=self.mock_ws,
+        tool_runner=tr,
+        hook_runner=hr,
+    )
+
+    event = localharness_pb2.OutputEvent(
+        tool_call=localharness_pb2.ToolCall(
+            id="call_typed",
+            name="value_error_tool",
+            arguments_json="{}",
+        )
+    )
+
+    await self.mock_ws.put_event(event)
+    await asyncio.sleep(0.1)
+
+    self.assertEqual(len(captured_errors), 1)
+    # The hook must receive the original ValueError, not RuntimeError.
+    self.assertIsInstance(captured_errors[0], ValueError)
+    self.assertNotIsInstance(captured_errors[0], RuntimeError)
+    self.assertIn("bad input", str(captured_errors[0]))
+
 
 class LocalConnectionBuiltinDecideHookTest(
     unittest.IsolatedAsyncioTestCase
