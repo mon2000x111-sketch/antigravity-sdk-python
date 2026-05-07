@@ -81,7 +81,7 @@ async def main():
     response = await agent.chat(
         "Should I use the library 'insecure-lib' in my project?"
     )
-    print(f"Agent: {response.text}\n")
+    print(f"Agent: {await response.text()}\n")
 
 
 if __name__ == "__main__":

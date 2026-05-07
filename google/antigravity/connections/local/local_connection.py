@@ -126,14 +126,26 @@ class LocalConnectionStep(types.Step):
 
     id_str = f"{traj_id}-{step_idx}" if traj_id else str(step_idx)
 
-    tc_dict = step_dict.get("tool_call")
     tool_calls = []
-    if tc_dict:
+
+    # Find the active built-in tool enum and field name, if any.
+    active_tool_pair = next(
+        (
+            (tool_enum.value, step_dict[proto_field])
+            for tool_enum, proto_field in _BUILTIN_TOOL_PROTO_FIELDS.items()
+            if proto_field in step_dict
+        ),
+        (None, {}),
+    )
+    active_tool_name, sub_msg = active_tool_pair
+    active_tool_args = sub_msg if isinstance(sub_msg, dict) else {}
+
+    if active_tool_name:
       tool_calls.append(
           types.ToolCall(
-              name=tc_dict["name"],
-              args=tc_dict.get("args", {}),
-              id=tc_dict.get("id"),
+              name=active_tool_name,
+              args=active_tool_args,
+              id=f"{traj_id}-{step_idx}",
           )
       )
 
@@ -143,7 +155,7 @@ class LocalConnectionStep(types.Step):
       step_type = types.StepType.COMPACTION
     elif step_dict.get("finish") is not None:
       step_type = types.StepType.FINISH
-    elif tc_dict or any(
+    elif active_tool_name or any(
         step_dict.get(k) is not None
         for k in _BUILTIN_TOOL_PROTO_FIELDS.values()
     ):
@@ -798,7 +810,18 @@ class LocalConnection(connection.Connection):
     """Handles tool execution and hook interception."""
     args = json.loads(tool_call.arguments_json or "{}")
 
-    tc = types.ToolCall(name=tool_call.name, args=args)
+    tc = types.ToolCall(id=tool_call.id, name=tool_call.name, args=args)
+
+    tool_call_step = LocalConnectionStep(
+        id=tool_call.id,
+        step_index=1,
+        type=types.StepType.TOOL_CALL,
+        source=types.StepSource.MODEL,
+        target=types.StepTarget.ENVIRONMENT,
+        status=types.StepStatus.ACTIVE,
+        tool_calls=[tc],
+    )
+    await self._step_queue.put(tool_call_step)
     op_context = None
 
     if self._hook_runner:
@@ -869,16 +892,6 @@ class LocalConnection(connection.Connection):
           "Yielding to user.",
           tool_call.name,
       )
-      step_dict = {
-          "type": "tool_call",
-          "state": "STATE_ACTIVE",
-          "tool_call": {
-              "name": tool_call.name,
-              "args": args,
-              "id": tool_call.id,
-          },
-      }
-      await self._step_queue.put(LocalConnectionStep.from_dict(step_dict))
 
   def _tool_result_to_dict(self, result: types.ToolResult) -> dict[str, Any]:
     if result.error is not None:

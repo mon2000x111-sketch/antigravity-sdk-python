@@ -28,17 +28,44 @@ from google.antigravity.connections.local.local_connection_config import LocalAg
 
 
 async def main():
-  logging.basicConfig(level=logging.INFO)
+  logging.basicConfig(level=logging.WARNING)
 
   print("Creating agent...")
   config = LocalAgentConfig(
-      system_instructions="You are a helpful assistant.",
+      system_instructions="You are a creative novelist assistant.",
   )
   async with Agent(config) as agent:
 
-    print("\nChatting with agent...")
-    response = await agent.chat("Hello! What is 2+2?")
-    print(f"Agent: {response.text}\n")
+    prompt = (
+        "Simply tell me a 500-word science fiction story about a lonely robot"
+        " searching for its creator."
+    )
+    print(f"\nUser: {prompt}")
+
+    # Instant return — does not block
+    response = await agent.chat(prompt)
+
+    # Workflow A: Stream thoughts (reasoning deltas) in real-time!
+    print("Agent (Streaming thoughts/reasoning): ")
+    print("-------------------------------------------------------")
+    async for thought in response.thoughts:
+      print(thought, end="", flush=True)
+    print("\n-------------------------------------------------------\n")
+
+    # Workflow B: Stream conversational text deltas in real-time!
+    print("Agent (Streaming final answer text): ")
+    print("-------------------------------------------------------")
+    async for token in response:
+      print(token, end="", flush=True)
+    print("\n-------------------------------------------------------\n")
+
+    print("=== [Stream Exhausted / Cache Resolved] ===")
+
+    # Workflow C: Re-iteration / Lazy accessor replay (Instant cache pull!)
+    print("\nPrinting full aggregated text response from in-memory cache:")
+    print("-------------------------------------------------------")
+    print(await response.text())
+    print("-------------------------------------------------------\n")
 
 
 if __name__ == "__main__":

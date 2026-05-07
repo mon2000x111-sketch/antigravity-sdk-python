@@ -199,14 +199,25 @@ class LocalConnectionStep(types.Step):
 
     id_str = f"{traj_id}-{step_idx}" if traj_id else str(step_idx)
 
-    tc_dict = step_dict.get("tool_call")
+    # Extract tool call details from the active action field on StepUpdate
     tool_calls = []
-    if tc_dict:
+    active_tool_name = None
+    active_tool_args = {}
+
+    for tool_enum, proto_field in _BUILTIN_TOOL_PROTO_FIELDS.items():
+      if proto_field in step_dict:
+        active_tool_name = tool_enum.value
+        sub_msg = step_dict[proto_field]
+        if isinstance(sub_msg, dict):
+          active_tool_args = sub_msg
+        break
+
+    if active_tool_name:
       tool_calls.append(
           types.ToolCall(
-              name=tc_dict["name"],
-              args=tc_dict.get("args", {}),
-              id=tc_dict.get("id"),
+              name=active_tool_name,
+              args=active_tool_args,
+              id=f"{traj_id}-{step_idx}",
           )
       )
 
@@ -216,7 +227,7 @@ class LocalConnectionStep(types.Step):
       step_type = types.StepType.COMPACTION
     elif step_dict.get("finish") is not None:
       step_type = types.StepType.FINISH
-    elif tc_dict or any(
+    elif active_tool_name or any(
         step_dict.get(k) is not None
         for k in _BUILTIN_TOOL_PROTO_FIELDS.values()
     ):
@@ -1112,7 +1123,19 @@ class LocalConnection(connection.Connection):
     """Handles tool execution and hook interception."""
     args = json.loads(tool_call.arguments_json or "{}")
 
-    tc = types.ToolCall(name=tool_call.name, args=args)
+    tc = types.ToolCall(id=tool_call.id, name=tool_call.name, args=args)
+
+    # Queue a ToolCall Step Update in real-time so Layer 3 streams see the Host/MCP tool dispatches E2E!
+    tool_call_step = LocalConnectionStep(
+        id=tool_call.id,
+        step_index=1,
+        type=types.StepType.TOOL_CALL,
+        source=types.StepSource.MODEL,
+        target=types.StepTarget.ENVIRONMENT,
+        status=types.StepStatus.ACTIVE,
+        tool_calls=[tc],
+    )
+    await self._step_queue.put(tool_call_step)
     op_context = None
 
     if self._hook_runner:

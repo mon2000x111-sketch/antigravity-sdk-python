@@ -50,11 +50,11 @@ async def main():
     print("\nChatting with agent...")
     # Ask it to run a safe command
     response = await agent.chat("List the files in the current directory.")
-    print(f"Agent: {response.text}\n")
+    print(f"Agent: {await response.text()}\n")
 
     # Ask it to run a dangerous command
     response = await agent.chat("Delete all files using rm -rf.")
-    print(f"Agent: {response.text}\n")
+    print(f"Agent: {await response.text()}\n")
 
 
 if __name__ == "__main__":

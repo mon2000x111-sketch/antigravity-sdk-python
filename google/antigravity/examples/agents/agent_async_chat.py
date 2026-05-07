@@ -134,7 +134,7 @@ class AsyncChatRoom:
 
       prompt = self._build_incremental_prompt(unseen)
       response = await agent.chat(prompt)
-      text = response.text.strip()
+      text = (await response.text()).strip()
       is_pass = _PASS_TOKEN in text or not text
 
       if is_pass:

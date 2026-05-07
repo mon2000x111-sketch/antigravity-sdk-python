@@ -223,7 +223,7 @@ async def main() -> None:
     r2 = await agent.chat(
         "Send a notification to bob@company.org saying 'Welcome aboard!'."
     )
-    print(f"\n  💬 Agent: {r2.text.strip()}")
+    print(f"\n  💬 Agent: {(await r2.text()).strip()}")
 
     # 2. Error recovery: send_to_unknown fails, FallbackHook steers
     #    the model toward using lookup_user instead.
@@ -233,7 +233,7 @@ async def main() -> None:
     r3 = await agent.chat(
         "Send a message to 'Charlie' saying 'Hey, are you free tomorrow?'"
     )
-    print(f"\n  💬 Agent: {r3.text.strip()}")
+    print(f"\n  💬 Agent: {(await r3.text()).strip()}")
 
     # 3. Rate limiting: exceed the per-tool limit.
     print(f"\n{'='*60}")
@@ -243,7 +243,7 @@ async def main() -> None:
         "Look up user1@test.com, then user2@test.com, then user3@test.com,"
         " then user4@test.com. Use the lookup_user tool for each one."
     )
-    print(f"\n  💬 Agent: {r4.text.strip()}")
+    print(f"\n  💬 Agent: {(await r4.text()).strip()}")
 
     print(f"\n{'='*60}")
     print(f"📋 Audit Log ({len(audit_hook.log)} entries)")

@@ -67,6 +67,7 @@ class Conversation:
         thoughts_token_count=0,
         cached_content_token_count=0,
     )
+    self._turn_usage: types.UsageMetadata | None = None
 
   @classmethod
   @contextlib.asynccontextmanager
@@ -101,6 +102,7 @@ class Conversation:
     """
     await self.wait_for_idle()
     self._turn_start_indices.append(len(self._steps))
+    self._turn_usage = None
     await self._connection.send(prompt, **kwargs)
 
   async def receive_steps(self) -> AsyncIterator[types.Step]:
@@ -121,52 +123,62 @@ class Conversation:
       self._enforce_max_history()
       yield step
 
-  async def chat(self, prompt: types.Content) -> types.ChatResponse:
-    """Sends a prompt and returns the complete response.
+  async def receive_chunks(
+      self,
+  ) -> AsyncIterator[types.StreamChunk | types.ToolCall]:
+    """Receives and yields real-time semantic chunks for the current turn.
 
-    This is a convenience wrapper around send() + receive_steps() that
-    collects all steps and extracts the final model response.
+    Yields:
+      Thought, Text, or ToolCall events in real-time.
+    """
+    async for step in self.receive_steps():
+      is_model = step.source == types.StepSource.MODEL
+      is_target_user = step.target == types.StepTarget.USER
+
+      if is_model and is_target_user:
+        # Yield real-time thought deltas directly
+        if step.thinking_delta:
+          yield types.Thought(
+              step_index=step.step_index, text=step.thinking_delta
+          )
+
+        # Yield real-time text deltas directly
+        if step.content_delta:
+          yield types.Text(step_index=step.step_index, text=step.content_delta)
+
+      # Yield tool calls in real-time as they are dispatched
+      if step.tool_calls:
+        for call in step.tool_calls:
+          yield call
+
+  def get_last_structured_output(self) -> Any | None:
+    """Extracts the structured output payload from the most recent FINISH step.
+
+    Returns:
+      The parsed JSON structured output object, or None if not found.
+    """
+    for step in reversed(self._steps):
+      if step.type == types.StepType.FINISH:
+        return step.structured_output
+    return None
+
+  async def chat(
+      self, prompt: types.Content | None = None, **kwargs: Any
+  ) -> types.ChatResponse:
+    """Sends a prompt and returns a streaming ChatResponse instantly.
+
+    This is a unified entry point supporting real-time text delta streaming
+    via iteration, or non-blocking deferred accessors for standard reading.
 
     Args:
       prompt: The user message to send.
+      **kwargs: Strategy-specific options.
 
     Returns:
-      A ChatResponse with the final text and all steps.
+      A lazy streaming ChatResponse object wrapping the chunk generator.
     """
-    await self.send(prompt)
-    steps = []
-    final_response = ""
-    structured_output = None
-    turn_usage: types.UsageMetadata | None = None
-    async for step in self.receive_steps():
-      steps.append(step)
-      if step.is_complete_response:
-        final_response = step.content
-      if step.type == types.StepType.FINISH:
-        structured_output = step.structured_output
-      if step.usage_metadata:
-        if turn_usage is None:
-          turn_usage = types.UsageMetadata(
-              prompt_token_count=0,
-              cached_content_token_count=0,
-              candidates_token_count=0,
-              thoughts_token_count=0,
-              total_token_count=0,
-          )
-        usage = step.usage_metadata
-        turn_usage.prompt_token_count += usage.prompt_token_count or 0
-        turn_usage.cached_content_token_count += (
-            usage.cached_content_token_count or 0
-        )
-        turn_usage.candidates_token_count += usage.candidates_token_count or 0
-        turn_usage.thoughts_token_count += usage.thoughts_token_count or 0
-        turn_usage.total_token_count += usage.total_token_count or 0
-    return types.ChatResponse(
-        text=final_response,
-        steps=steps,
-        structured_output=structured_output,
-        usage_metadata=turn_usage,
-    )
+    await self.send(prompt, **kwargs)
+    return types.ChatResponse(self.receive_chunks(), conversation=self)
 
   # ---------------------------------------------------------------------------
   # History and state
@@ -258,6 +270,11 @@ class Conversation:
     """
     return self._cumulative_usage.model_copy()
 
+  @property
+  def last_turn_usage(self) -> types.UsageMetadata | None:
+    """Returns token usage accumulated during the most recent turn, or None."""
+    return self._turn_usage.model_copy() if self._turn_usage else None
+
   def _accumulate_usage(self, usage: types.UsageMetadata) -> None:
     """Adds per-step usage counts to the session-level cumulative totals."""
     cu = self._cumulative_usage
@@ -266,6 +283,21 @@ class Conversation:
     cu.candidates_token_count += usage.candidates_token_count or 0
     cu.thoughts_token_count += usage.thoughts_token_count or 0
     cu.total_token_count += usage.total_token_count or 0
+
+    if self._turn_usage is None:
+      self._turn_usage = types.UsageMetadata(
+          prompt_token_count=0,
+          candidates_token_count=0,
+          total_token_count=0,
+          thoughts_token_count=0,
+          cached_content_token_count=0,
+      )
+    tu = self._turn_usage
+    tu.prompt_token_count += usage.prompt_token_count or 0
+    tu.cached_content_token_count += usage.cached_content_token_count or 0
+    tu.candidates_token_count += usage.candidates_token_count or 0
+    tu.thoughts_token_count += usage.thoughts_token_count or 0
+    tu.total_token_count += usage.total_token_count or 0
 
   # ---------------------------------------------------------------------------
   # Lifecycle

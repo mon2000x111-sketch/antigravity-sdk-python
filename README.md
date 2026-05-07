@@ -32,13 +32,52 @@ async def main():
     )
     async with Agent(config) as agent:
         response = await agent.chat("What files are in the current directory?")
-        print(response.text)
+        print(await response.text())
 
 async def run():
     await main()
 
 if __name__ == "__main__":
     asyncio.run(run())
+```
+
+### Streaming Responses
+
+To stream agent output in real-time (e.g., for fluid UI or console applications), simply iterate over the `ChatResponse` object using an `async for` loop. The stream wrapper natively yields conversational `str` text tokens as they arrive, with zero network overhead:
+
+```python
+import asyncio
+import sys
+from google.antigravity import Agent, AgentConfig
+
+async def main():
+    config = AgentConfig(
+        system_instructions="You are a helpful assistant.",
+    )
+    async with Agent(config) as agent:
+        # Returns instantly — does not block
+        response = await agent.chat("Write a short poem about space.")
+        
+        async for token in response:
+            sys.stdout.write(token)
+            sys.stdout.flush()
+        print()
+
+asyncio.run(main())
+```
+
+### Sugared Thoughts & Tool Call Streams (Advanced)
+
+For more complex use cases, you can also stream internal model reasoning/thinking or intercept tool call dispatches in real-time using dedicated async stream properties:
+
+```python
+# 1. Stream reasoning/thinking deltas
+async for thought in response.thoughts:
+    show_thinking_bubble(thought)
+
+# 2. Stream strongly-typed ToolCall events
+async for call in response.tool_calls:
+    show_executing_spinner(call.name)
 ```
 
 By default, `Agent` runs in **read-only mode** for safety. Pass
@@ -83,7 +122,7 @@ async def main():
     async with Conversation.create(strategy) as conversation:
         # High-level: one-call send + collect
         response = await conversation.chat("What files are here?")
-        print(response.text)
+        print(await response.text())
 
         # Step history accumulates automatically
         print(f"Total steps: {len(conversation.history)}")
@@ -129,7 +168,7 @@ async with Agent(config) as agent:
         pdf_spec
     ]
     response = await agent.chat(prompt)
-    print(response.text)
+    print(await response.text())
 ```
 
 ### Custom Tools

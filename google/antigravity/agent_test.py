@@ -66,18 +66,14 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     mock_cm.__aenter__.return_value = mock_conversation
     mock_conv_create.return_value = mock_cm
 
-    mock_conversation.chat = mock.AsyncMock(
-        return_value=types.ChatResponse(
-            text="Hello back",
-            steps=[types.Step(is_complete_response=True, content="Hello back")],
-        )
-    )
+    mock_response = mock.MagicMock(spec=types.ChatResponse)
+    mock_response.text = mock.AsyncMock(return_value="Hello back")
+    mock_conversation.chat = mock.AsyncMock(return_value=mock_response)
 
     config = local_connection.LocalAgentConfig(system_instructions="test")
     async with agent.Agent(config) as ag:
       response = await ag.chat("Hello")
-      self.assertEqual(response.text, "Hello back")
-      self.assertEqual(len(response.steps), 1)
+      self.assertEqual(await response.text(), "Hello back")
       mock_conversation.chat.assert_called_once_with("Hello")
 
   @mock.patch.object(lc_module, "LocalConnectionStrategy", autospec=True)
@@ -95,16 +91,9 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     mock_cm.__aenter__.return_value = mock_conversation
     mock_conv_create.return_value = mock_cm
 
-    mock_conversation.chat = mock.AsyncMock(
-        return_value=types.ChatResponse(
-            text="Analyzed image content",
-            steps=[
-                types.Step(
-                    is_complete_response=True, content="Analyzed image content"
-                )
-            ],
-        )
-    )
+    mock_response = mock.MagicMock(spec=types.ChatResponse)
+    mock_response.text = mock.AsyncMock(return_value="Analyzed image content")
+    mock_conversation.chat = mock.AsyncMock(return_value=mock_response)
 
     config = local_connection.LocalAgentConfig(system_instructions="test")
     async with agent.Agent(config) as ag:
@@ -113,7 +102,7 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
           types.Image(mime_type="image/png", data=b"png_bytes"),
       ]
       response = await ag.chat(multimodal_prompt)
-      self.assertEqual(response.text, "Analyzed image content")
+      self.assertEqual(await response.text(), "Analyzed image content")
       mock_conversation.chat.assert_called_once_with(multimodal_prompt)
 
   @mock.patch(

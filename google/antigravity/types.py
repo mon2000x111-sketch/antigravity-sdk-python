@@ -24,7 +24,7 @@ import enum
 import itertools
 import mimetypes
 import pathlib
-from typing import Annotated, Any, Callable, List, Optional, Union
+from typing import Annotated, Any, AsyncIterator, Callable, List, Optional, Union
 
 import pydantic
 
@@ -359,6 +359,15 @@ class StepSource(str, enum.Enum):
   UNKNOWN = "UNKNOWN"
 
 
+class StepTarget(str, enum.Enum):
+  """Target of a step interaction."""
+
+  USER = "TARGET_USER"
+  ENVIRONMENT = "TARGET_ENVIRONMENT"
+  UNSPECIFIED = "TARGET_UNSPECIFIED"
+  UNKNOWN = "UNKNOWN"
+
+
 class StepStatus(str, enum.Enum):
   """Status of a step."""
 
@@ -378,6 +387,7 @@ class Step(pydantic.BaseModel):
     step_index: Integer index of the step in the trajectory.
     type: The high-level type of the step.
     source: The source that generated the step.
+    target: The target interacting with this step.
     status: The status of the step.
     content: The output of the step.
     thinking: Model reasoning/thinking for planner responses.
@@ -398,6 +408,7 @@ class Step(pydantic.BaseModel):
   step_index: int = 0
   type: StepType = StepType.UNKNOWN
   source: StepSource = StepSource.UNKNOWN
+  target: StepTarget = StepTarget.UNKNOWN
   status: StepStatus = StepStatus.UNKNOWN
   content: str = ""
   content_delta: str = ""
@@ -570,21 +581,115 @@ class FileChange(pydantic.BaseModel):
 # =============================================================================
 
 
-class ChatResponse(pydantic.BaseModel):
-  """Response from a chat interaction containing the text and execution steps.
+class StreamChunk(pydantic.BaseModel):
+  """Base class for all real-time semantic chunks yielded during agent.chat() streaming."""
 
-  Attributes:
-    text: The final model response text.
-    steps: All steps received during the interaction.
-    structured_output: The structured output extracted from the finish step.
-    usage_metadata: Accumulated token usage across all model invocations in this
-      turn, or None if no usage data was reported.
+  step_index: int
+  model_config = pydantic.ConfigDict(frozen=True)
+
+
+class Thought(StreamChunk):
+  """A delta chunk representing a piece of the model's internal reasoning/thinking."""
+
+  text: str  # Incremental thought string delta
+  signature: bytes | None = None
+
+
+class Text(StreamChunk):
+  """A delta chunk representing a piece of the model's text output."""
+
+  text: str  # Incremental response string delta
+
+
+class ChatResponse:
+  """The turn response from Agent.chat().
+
+  An async stream of semantic chunks with lazy buffering. This class provides
+  both zero-boilerplate text token streaming and advanced sugared event streams.
   """
 
-  text: str
-  steps: list[Step]
-  structured_output: Any | None = None
-  usage_metadata: UsageMetadata | None = None
+  def __init__(
+      self,
+      chunk_stream: AsyncIterator[StreamChunk | ToolCall | ToolResult],
+      conversation: Any,
+  ):
+    self._chunk_stream = chunk_stream
+    self._conversation = conversation
+    self._buffered_chunks: list[StreamChunk | ToolCall | ToolResult] = []
+    self._is_done = False
+
+  @property
+  def chunks(self) -> AsyncIterator[StreamChunk | ToolCall | ToolResult]:
+    """The rich, unfiltered semantic chunk stream for more advanced use cases."""
+
+    async def _chunks_gen():
+      # Cache Walk (yields already cached chunks for re-iteration)
+      for chunk in self._buffered_chunks:
+        yield chunk
+
+      # Network Walk (pulls from the live stream and caches them)
+      if not self._is_done:
+        try:
+          async for chunk in self._chunk_stream:
+            self._buffered_chunks.append(chunk)
+            yield chunk
+          self._is_done = True
+        except Exception:
+          self._is_done = True
+          raise
+
+    return _chunks_gen()
+
+  async def __aiter__(self) -> AsyncIterator[str]:
+    """Streams conversational text token deltas directly as raw strings."""
+    async for chunk in self.chunks:
+      chunk_obj: Any = chunk
+      if isinstance(chunk_obj, Text):
+        yield chunk_obj.text
+
+  @property
+  def thoughts(self) -> AsyncIterator[str]:
+    """The internal model reasoning/thinking token deltas as raw strings."""
+
+    async def _thoughts_gen():
+      async for chunk in self.chunks:
+        chunk_obj: Any = chunk
+        if isinstance(chunk_obj, Thought):
+          yield chunk_obj.text
+
+    return _thoughts_gen()
+
+  @property
+  def tool_calls(self) -> AsyncIterator[ToolCall]:
+    """The strongly-typed ToolCall objects in real-time as they are dispatched."""
+
+    async def _tool_calls_gen():
+      async for chunk in self.chunks:
+        chunk_obj: Any = chunk
+        if isinstance(chunk_obj, ToolCall):
+          yield chunk_obj
+
+    return _tool_calls_gen()
+
+  async def resolve(self) -> list[StreamChunk | ToolCall | ToolResult]:
+    """Drains the underlying stream completely and returns all chunks as a flat list."""
+    return [chunk async for chunk in self.chunks]
+
+  async def text(self) -> str:
+    """Drains the stream and returns the fully aggregated conversational response text."""
+    chunks = await self.resolve()
+    return "".join(chunk.text for chunk in chunks if isinstance(chunk, Text))
+
+  async def structured_output(self) -> Any | None:
+    """Drains the stream and extracts the parsed structured output payload, if one exists."""
+    if not self._is_done:
+      await self.resolve()
+    return self._conversation.get_last_structured_output()
+
+  @property
+  def usage_metadata(self) -> UsageMetadata | None:
+    """Accumulated token usage across all model invocations in this turn."""
+    return self._conversation.last_turn_usage
 
 
 # =============================================================================

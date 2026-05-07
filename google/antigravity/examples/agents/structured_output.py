@@ -67,15 +67,16 @@ async def run():
       print("\nSending prompt to agent...")
       response = await meeting_agent.chat(prompt)
 
-      if response.structured_output:
+      data = await response.structured_output()
+      if data:
         print("\n=== Structured Meeting Action Items ===")
-        for item in response.structured_output.get("action_items", []):
+        for item in data.get("action_items", []):
           print(f"- Assignee: {item.get('assignee')}")
           print(f"  Task:     {item.get('task')}")
           print(f"  Deadline: {item.get('deadline')}\n")
       else:
         print("\nFailed to extract structured summary natively.")
-        print(f"Final Text Response: {response.text}")
+        print(f"Final Text Response: {await response.text()}")
 
   except Exception:  # pylint: disable=broad-exception-caught
     logging.exception("Execution failed")

@@ -60,7 +60,7 @@ async def main():
 
     print("\nChatting with agent...")
     response = await agent.chat("Hello! Tell me a short joke.")
-    print(f"Agent: {response.text}\n")
+    print(f"Agent: {await response.text()}\n")
 
     # Wait a bit to let the trigger fire
     print("Waiting for trigger to fire...")

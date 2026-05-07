@@ -711,6 +711,50 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     sent_data = json.loads(self.mock_ws.sent_messages[0])
     self.assertTrue(sent_data.get("haltRequest"))
 
+  async def test_handle_tool_call_queues_step(self):
+    """Tests ensuring _handle_tool_call manually queues the ToolCall step in _step_queue."""
+    conn = local_connection.LocalConnection(
+        process=self.mock_process,
+        ws=self.mock_ws,
+        tool_runner=self.tool_runner,
+    )
+
+    # Mock tool_call protobuf message from WebSocket
+    raw_tool_call = localharness_pb2.ToolCall(
+        id="call_123",
+        name="view_file",
+        arguments_json='{"path": "README.md"}',
+    )
+
+    # Trigger connection event dispatch
+    await conn._handle_tool_call(raw_tool_call)
+    await asyncio.sleep(0.1)
+
+    self.assertFalse(conn._step_queue.empty())
+    step_obj = await conn._step_queue.get()
+
+    actual_properties = {
+        "id": step_obj.id,
+        "type": step_obj.type,
+        "source": step_obj.source,
+        "target": step_obj.target,
+        "status": step_obj.status,
+        "tool_calls": [
+            {"name": tc.name, "args": tc.args} for tc in step_obj.tool_calls
+        ],
+    }
+
+    expected_properties = {
+        "id": "call_123",
+        "type": types.StepType.TOOL_CALL,
+        "source": types.StepSource.MODEL,
+        "target": types.StepTarget.ENVIRONMENT,
+        "status": types.StepStatus.ACTIVE,
+        "tool_calls": [{"name": "view_file", "args": {"path": "README.md"}}],
+    }
+
+    self.assertEqual(actual_properties, expected_properties)
+
 
 class LocalConnectionStepFromDictTest(unittest.TestCase):
   """Tests for LocalConnectionStep.from_dict derivation logic.
@@ -799,13 +843,17 @@ class LocalConnectionStepFromDictTest(unittest.TestCase):
     self.assertFalse(step.is_complete_response)
 
   def test_step_type_tool_call_with_builtin(self):
-    """Verifies that a step with a builtin tool proto field is typed TOOL_CALL."""
+    """Verifies that a step with a builtin tool proto field is typed TOOL_CALL and parses details."""
     step = local_connection.LocalConnectionStep.from_dict({
         "source": "SOURCE_MODEL",
         "state": "STATE_ACTIVE",
         "view_file": {"file_path": "/foo"},
     })
     self.assertEqual(step.type, types.StepType.TOOL_CALL)
+
+    self.assertEqual(len(step.tool_calls), 1)
+    self.assertEqual(step.tool_calls[0].name, "view_file")
+    self.assertEqual(step.tool_calls[0].args, {"file_path": "/foo"})
 
   def test_structured_output_extracted_from_finish(self):
     """Verifies that structured output is extracted when finish payload is present.

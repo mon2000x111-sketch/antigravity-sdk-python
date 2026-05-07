@@ -34,9 +34,10 @@ def _make_step(
     source: types.StepSource = types.StepSource.MODEL,
     status: types.StepStatus = types.StepStatus.DONE,
     is_final: bool = False,
+    target: types.StepTarget = types.StepTarget.USER,
 ) -> types.Step:
   """Creates a Step with sensible defaults for testing."""
-  return types.Step(
+  step = types.Step(
       id=str(step_index),
       step_index=step_index,
       type=step_type,
@@ -45,6 +46,8 @@ def _make_step(
       content=content,
       is_complete_response=is_final,
   )
+  step.target = target
+  return step
 
 
 class ConversationCreateTest(unittest.IsolatedAsyncioTestCase):
@@ -219,6 +222,115 @@ class ConversationReceiveStepsTest(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(len(conv.compaction_indices), 1)
 
 
+class ConversationReceiveChunksTest(unittest.IsolatedAsyncioTestCase):
+  """Tests covering receive_chunks text, thought, and tool-call delta routing."""
+
+  async def test_receive_chunks_routes_thoughts(self):
+    """Verifies that receive_chunks correctly yields Thought deltas."""
+    step = _make_step(
+        "Thinking phase", step_index=1, status=types.StepStatus.ACTIVE
+    )
+    step.thinking_delta = "Thinking..."
+
+    mock_connection = mock.MagicMock(spec=connection.Connection)
+
+    async def mock_generator():
+      yield step
+
+    mock_connection.receive_steps.return_value = mock_generator()
+    conv = conversation.Conversation(mock_connection)
+
+    chunks = [chunk async for chunk in conv.receive_chunks()]
+
+    self.assertEqual(len(chunks), 1)
+    self.assertIsInstance(chunks[0], types.Thought)
+    self.assertEqual(chunks[0].text, "Thinking...")
+
+  async def test_receive_chunks_routes_text(self):
+    """Verifies that receive_chunks correctly yields Text deltas."""
+    s1 = _make_step(
+        "Answer start", step_index=1, status=types.StepStatus.ACTIVE
+    )
+    s1.content_delta = "Hello"
+
+    s2 = _make_step("Answer end", step_index=1, status=types.StepStatus.DONE)
+    s2.content_delta = " world!"
+
+    mock_connection = mock.MagicMock(spec=connection.Connection)
+
+    async def mock_generator():
+      yield s1
+      yield s2
+
+    mock_connection.receive_steps.return_value = mock_generator()
+    conv = conversation.Conversation(mock_connection)
+
+    chunks = [chunk async for chunk in conv.receive_chunks()]
+
+    self.assertEqual(len(chunks), 2)
+    self.assertIsInstance(chunks[0], types.Text)
+    self.assertEqual(chunks[0].text, "Hello")
+    self.assertIsInstance(chunks[1], types.Text)
+    self.assertEqual(chunks[1].text, " world!")
+
+  async def test_receive_chunks_filters_out_telemetry_noise(self) -> None:
+    """Verifies that receive_chunks ignores prompts and environmental tool checks."""
+    s_prompt = _make_step(
+        "Prompt context", step_index=0, source=types.StepSource.USER
+    )
+    s_confirm = _make_step(
+        "Confirming tool call...",
+        step_index=1,
+        target=types.StepTarget.ENVIRONMENT,
+    )
+    s_valid = _make_step(
+        "valid output",
+        step_index=2,
+        source=types.StepSource.MODEL,
+        target=types.StepTarget.USER,
+    )
+    s_valid.content_delta = "Valid answer"
+
+    mock_connection = mock.MagicMock(spec=connection.Connection)
+
+    async def mock_generator():
+      yield s_prompt
+      yield s_confirm
+      yield s_valid
+
+    mock_connection.receive_steps.return_value = mock_generator()
+    conv = conversation.Conversation(mock_connection)
+
+    chunks = [chunk async for chunk in conv.receive_chunks()]
+
+    self.assertEqual(len(chunks), 1)
+    self.assertIsInstance(chunks[0], types.Text)
+    self.assertEqual(chunks[0].text, "Valid answer")
+
+  async def test_receive_chunks_routes_tool_calls(self) -> None:
+    """Verifies that receive_chunks yields strongly-typed ToolCall objects natively."""
+    tc = types.ToolCall(
+        id="call_123", name="view_file", args={"path": "README.md"}
+    )
+    s_tool = _make_step("", step_index=1, step_type=types.StepType.TOOL_CALL)
+    s_tool.tool_calls = [tc]
+
+    mock_connection = mock.MagicMock(spec=connection.Connection)
+
+    async def mock_generator():
+      yield s_tool
+
+    mock_connection.receive_steps.return_value = mock_generator()
+    conv = conversation.Conversation(mock_connection)
+
+    chunks = [chunk async for chunk in conv.receive_chunks()]
+
+    self.assertEqual(len(chunks), 1)
+    self.assertIsInstance(chunks[0], types.ToolCall)
+    self.assertEqual(chunks[0].name, "view_file")
+    self.assertEqual(chunks[0].args, {"path": "README.md"})
+
+
 class ConversationHistoryTest(unittest.IsolatedAsyncioTestCase):
   """Validates history accessors across multiple turns."""
 
@@ -287,10 +399,11 @@ class ConversationHistoryTest(unittest.IsolatedAsyncioTestCase):
 class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
   """Validates the chat() convenience method."""
 
-  async def test_chat_returns_response_with_text_and_steps(self):
-    """Verifies chat() collects steps and returns the final response text."""
+  async def test_chat_returns_streaming_response_with_text(self):
+    """Verifies chat() returns ChatResponse, and text() resolves the final string."""
     tool_step = _make_step("", step_index=1, step_type=types.StepType.TOOL_CALL)
     final_step = _make_step("the answer", step_index=2, is_final=True)
+    final_step.content_delta = "the answer"
 
     mock_connection = mock.MagicMock(spec=connection.Connection)
     mock_connection.wait_for_idle = mock.AsyncMock()
@@ -306,12 +419,12 @@ class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
     result = await conv.chat("question")
 
     self.assertIsInstance(result, types.ChatResponse)
-    self.assertEqual(result.text, "the answer")
-    self.assertEqual(len(result.steps), 2)
+    self.assertEqual(await result.text(), "the answer")
 
   async def test_chat_multimodal_input(self):
     """Verifies that the chat convenience wrapper accepts and forwards multimodal Content prompts."""
     final_step = _make_step("image analysis done", step_index=1, is_final=True)
+    final_step.content_delta = "image analysis done"
     mock_connection = mock.MagicMock(spec=connection.Connection)
     mock_connection.wait_for_idle = mock.AsyncMock()
     mock_connection.send = mock.AsyncMock()
@@ -328,12 +441,13 @@ class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
     ]
     result = await conv.chat(multimodal_prompt)
 
-    self.assertEqual(result.text, "image analysis done")
+    self.assertEqual(await result.text(), "image analysis done")
     mock_connection.send.assert_called_once_with(multimodal_prompt)
 
   async def test_chat_records_in_history(self):
-    """Verifies chat() steps are accumulated in conversation history."""
+    """Verifies chat() steps are accumulated in conversation history after resolution."""
     step = _make_step("done", step_index=1, is_final=True)
+    step.content_delta = "done"
     mock_connection = mock.MagicMock(spec=connection.Connection)
     mock_connection.wait_for_idle = mock.AsyncMock()
     mock_connection.send = mock.AsyncMock()
@@ -344,7 +458,8 @@ class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
     mock_connection.receive_steps.return_value = mock_generator()
     conv = conversation.Conversation(mock_connection)
 
-    await conv.chat("q")
+    result = await conv.chat("q")
+    await result.resolve()
 
     self.assertEqual(len(conv.history), 1)
     self.assertEqual(conv.turn_count, 1)
@@ -364,11 +479,10 @@ class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
 
     result = await conv.chat("q")
 
-    self.assertEqual(result.text, "")
-    self.assertEqual(len(result.steps), 1)
+    self.assertEqual(await result.text(), "")
 
   async def test_chat_returns_structured_output_when_final_step_has_it(self):
-    """Verifies chat() collects and returns structured_output from the final step."""
+    """Verifies chat() collects and returns structured_output via lazy accessor."""
     final_step = _make_step(
         "done", step_index=1, step_type=types.StepType.FINISH, is_final=True
     )
@@ -386,7 +500,7 @@ class ConversationChatTest(unittest.IsolatedAsyncioTestCase):
 
     result = await conv.chat("question")
 
-    self.assertEqual(result.structured_output, {"total_revenue": 386.0})
+    self.assertEqual(await result.structured_output(), {"total_revenue": 386.0})
 
 
 class ConversationStateTest(unittest.IsolatedAsyncioTestCase):
@@ -722,6 +836,7 @@ class ConversationUsageMetadataTest(unittest.IsolatedAsyncioTestCase):
 
     mock_connection.receive_steps.return_value = gen()
     result = await conv.chat("question")
+    await result.resolve()
 
     self.assertIsNotNone(result.usage_metadata)
     self.assertEqual(result.usage_metadata.prompt_token_count, 300)
@@ -737,6 +852,7 @@ class ConversationUsageMetadataTest(unittest.IsolatedAsyncioTestCase):
 
     mock_connection.receive_steps.return_value = gen()
     result = await conv.chat("question")
+    await result.resolve()
 
     self.assertIsNone(result.usage_metadata)
 

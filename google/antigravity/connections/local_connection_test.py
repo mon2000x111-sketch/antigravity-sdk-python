@@ -754,6 +754,38 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     sent_data = json.loads(self.mock_ws.sent_messages[0])
     self.assertTrue(sent_data.get("haltRequest"))
 
+  async def test_handle_tool_call_queues_step(self):
+    """Tests ensuring _handle_tool_call manually queues the ToolCall step in _step_queue."""
+    conn = local_connection.LocalConnection(
+        process=self.mock_process,
+        ws=self.mock_ws,
+        tool_runner=self.tool_runner,
+    )
+
+    # Mock tool_call protobuf message from WebSocket
+    raw_tool_call = localharness_pb2.ToolCall(
+        id="call_123",
+        name="view_file",
+        arguments_json='{"path": "README.md"}',
+    )
+
+    # Trigger connection event dispatch
+    await conn._handle_tool_call(raw_tool_call)
+    await asyncio.sleep(0.1)
+
+    self.assertFalse(conn._step_queue.empty())
+    step_obj = await conn._step_queue.get()
+
+    self.assertEqual(step_obj.id, "call_123")
+    self.assertEqual(step_obj.type, types.StepType.TOOL_CALL)
+    self.assertEqual(step_obj.source, types.StepSource.MODEL)
+    self.assertEqual(step_obj.target, types.StepTarget.ENVIRONMENT)
+    self.assertEqual(step_obj.status, types.StepStatus.ACTIVE)
+
+    self.assertEqual(len(step_obj.tool_calls), 1)
+    self.assertEqual(step_obj.tool_calls[0].name, "view_file")
+    self.assertEqual(step_obj.tool_calls[0].args, {"path": "README.md"})
+
 
 class LocalConnectionStepFromDictTest(unittest.TestCase):
   """Tests for LocalConnectionStep.from_dict derivation logic.

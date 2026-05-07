@@ -126,7 +126,7 @@ class ChatRoom:
         return (name, "")
       prompt = self._build_incremental_prompt(unseen)
       response = await ag.chat(prompt)
-      return (name, response.text.strip())
+      return (name, (await response.text()).strip())
 
     tasks = [_ask(n, a) for n, a in self._agents.items()]
     results = await asyncio.gather(*tasks)

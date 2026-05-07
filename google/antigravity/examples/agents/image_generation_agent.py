@@ -47,7 +47,7 @@ async def main():
 
     prompt1 = "Generate an image of a cute fluffy white cat, name it 'cat'."
     response1 = await image_agent.chat(prompt1)
-    print(f"Agent: {response1.text}\n")
+    print(f"Agent: {await response1.text()}\n")
 
     prompt2 = (
         "Can you modify that image to add a small red hat on the cat's head?"
@@ -55,7 +55,7 @@ async def main():
         " exact paths for both images that you created."
     )
     response2 = await image_agent.chat(prompt2)
-    print(f"Agent: {response2.text}\n")
+    print(f"Agent: {await response2.text()}\n")
 
 
 if __name__ == "__main__":

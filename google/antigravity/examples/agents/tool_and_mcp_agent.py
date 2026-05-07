@@ -75,7 +75,18 @@ async def main():
 
     try:
       response = await agent.chat(f"Read the file at {temp_path} upside down.")
-      print(f"Agent: {response.text}\n")
+
+      # Workflow A: Stream strongly-typed ToolCall dispatches in real-time!
+      print("Agent (Streaming tool calls/dispatched real-time): ")
+      print("-------------------------------------------------------")
+      async for call in response.tool_calls:
+        print(
+            f"🔧 [Tool Dispatch] Calling '{call.name}' with args: {call.args}"
+        )
+      print("-------------------------------------------------------\n")
+
+      # Workflow B: Aggregated Text resolution from cache
+      print(f"Agent: {await response.text()}\n")
     finally:
       os.unlink(temp_path)
 

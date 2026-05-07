@@ -31,12 +31,12 @@ strategy = LocalConnectionStrategy(...)
 
 async with Conversation.create(strategy) as conversation:
     response = await conversation.chat("What files are in the current directory?")
-    print(response.text)
+    print(await response.text())
     
     print(f"Total steps: {len(conversation.history)}")
 ```
 
-### Using `send()` and `receive_steps()` (Low-level/Streaming)
+### Using `send()` and `receive_steps()` (Low-level steps)
 
 ```python
 async with Conversation.create(strategy) as conversation:
@@ -44,6 +44,23 @@ async with Conversation.create(strategy) as conversation:
     async for step in conversation.receive_steps():
         if step.type == types.StepType.MODEL_RESPONSE:
             print(step.content, end="")
+```
+
+### Real-Time Streaming (High-level Delta Chunks)
+
+For fluid UI applications, you can stream tokens, thoughts, or tool calls in real-time using highly-sugared properties on `ChatResponse`:
+
+```python
+async with Conversation.create(strategy) as conversation:
+    response = await conversation.chat("Tell me a story.")
+    
+    # 1. Stream text answer tokens directly as raw strings
+    async for token in response:
+        print(token, end="", flush=True)
+        
+    # 2. Stream model reasoning thoughts directly as raw strings
+    async for thought in response.thoughts:
+        show_thinking_bubble(thought)
 ```
 
 ## Files

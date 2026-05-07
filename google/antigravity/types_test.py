@@ -28,6 +28,7 @@ from absl.testing import parameterized
 import pydantic
 
 from google.antigravity import types
+from google.antigravity.conversation import conversation
 
 
 class ToolCallTest(unittest.TestCase):
@@ -840,6 +841,155 @@ class ContentFromFileResolverTest(parameterized.TestCase):
       ):
         with self.assertRaisesRegex(OSError, "Failed to read file"):
           types.from_file(tmp_file)
+
+
+class ChatResponseStreamTest(unittest.IsolatedAsyncioTestCase):
+  """Tests for ChatResponse async stream and caching properties."""
+
+  async def test_text_concatenation(self):
+    """Verifies that text() aggregates and concatenates all Text chunks."""
+    t1 = types.Text(step_index=1, text="Hello ")
+    t2 = types.Thought(step_index=1, text="internal reasoning...")
+    t3 = types.Text(step_index=2, text="world!")
+
+    async def mock_stream():
+      yield t1
+      yield t2
+      yield t3
+
+    response = types.ChatResponse(
+        mock_stream(),
+        conversation=mock.MagicMock(spec=conversation.Conversation),
+    )
+    self.assertEqual(await response.text(), "Hello world!")
+
+  async def test_thoughts_sugared_stream(self):
+    """Verifies thoughts property yields only Thought delta strings."""
+    t1 = types.Thought(step_index=1, text="Let me think...")
+    t2 = types.Text(step_index=2, text="Standard response text.")
+
+    async def mock_stream():
+      yield t1
+      yield t2
+
+    response = types.ChatResponse(
+        mock_stream(),
+        conversation=mock.MagicMock(spec=conversation.Conversation),
+    )
+    thoughts = [token async for token in response.thoughts]
+    self.assertEqual(thoughts, ["Let me think..."])
+
+  async def test_tool_calls_sugared_stream(self):
+    """Verifies tool_calls property yields only ToolCall objects."""
+    t1 = types.Text(step_index=1, text="Invoking tool...")
+    t2 = types.ToolCall(id="call_1", name="get_weather", args={})
+
+    async def mock_stream():
+      yield t1
+      yield t2
+
+    response = types.ChatResponse(
+        mock_stream(),
+        conversation=mock.MagicMock(spec=conversation.Conversation),
+    )
+    calls = [call async for call in response.tool_calls]
+    self.assertEqual(len(calls), 1)
+    self.assertEqual(calls[0].name, "get_weather")
+
+  async def test_lazy_caching_and_re_iteration(self):
+    """Verifies that stream tokens are cached in memory and replayed for re-iteration."""
+    t1 = types.Text(step_index=1, text="A")
+    t2 = types.Text(step_index=2, text="B")
+
+    pull_count = 0
+
+    async def mock_stream():
+      nonlocal pull_count
+      pull_count += 1
+      yield t1
+      yield t2
+
+    response = types.ChatResponse(
+        mock_stream(),
+        conversation=mock.MagicMock(spec=conversation.Conversation),
+    )
+
+    # Iteration Round 1 (pulls from live stream and caches)
+    with self.subTest("round_1_live_caching"):
+      round_1 = [token async for token in response]
+      self.assertEqual(round_1, ["A", "B"])
+      self.assertEqual(pull_count, 1)
+
+    # Iteration Round 2 (replays from buffered cache without pulling again)
+    with self.subTest("round_2_cache_replay"):
+      round_2 = [token async for token in response]
+      self.assertEqual(round_2, ["A", "B"])
+      self.assertEqual(pull_count, 1)
+
+  async def test_structured_output_lazy_accessor(self):
+    """Verifies structured_output resolves the stream and fetches parsed payload from conversation."""
+    t_text = types.Text(step_index=1, text="finished")
+
+    async def mock_stream():
+      yield t_text
+
+    mock_conv = mock.MagicMock(spec=conversation.Conversation)
+    mock_conv.get_last_structured_output.return_value = {"result": "data"}
+
+    response = types.ChatResponse(mock_stream(), conversation=mock_conv)
+
+    data = await response.structured_output()
+    self.assertEqual(data, {"result": "data"})
+    mock_conv.get_last_structured_output.assert_called_once()
+
+  async def test_usage_metadata_lazy_accessor(self):
+    """Verifies usage_metadata resolves the stream and fetches payload from conversation."""
+    t_text = types.Text(step_index=1, text="finished")
+
+    async def mock_stream():
+      yield t_text
+
+    mock_conv = mock.MagicMock(spec=conversation.Conversation)
+    mock_conv.last_turn_usage = types.UsageMetadata(
+        prompt_token_count=10,
+        candidates_token_count=20,
+        total_token_count=30,
+    )
+
+    response = types.ChatResponse(mock_stream(), conversation=mock_conv)
+
+    await response.resolve()
+    usage = response.usage_metadata
+    self.assertIsNotNone(usage)
+    self.assertEqual(usage.prompt_token_count, 10)
+    self.assertEqual(usage.candidates_token_count, 20)
+    self.assertEqual(usage.total_token_count, 30)
+
+  def test_thought_chunk_validation(self):
+    """Verifies that the Thought subclass validates Pydantic schemas correctly."""
+    thought = types.Thought(step_index=1, text="reasoning", signature=b"sig")
+    self.assertEqual(thought.step_index, 1)
+    self.assertEqual(thought.text, "reasoning")
+    self.assertEqual(thought.signature, b"sig")
+
+  def test_text_chunk_validation(self):
+    """Verifies that the Text subclass validates Pydantic schemas correctly."""
+    text = types.Text(step_index=2, text="conversational answer")
+    self.assertEqual(text.step_index, 2)
+    self.assertEqual(text.text, "conversational answer")
+
+  async def test_empty_stream_text(self):
+    """Verifies that an empty stream resolves text to an empty string."""
+
+    async def mock_empty_stream():
+      return
+      yield
+
+    response = types.ChatResponse(
+        mock_empty_stream(),
+        conversation=mock.MagicMock(spec=conversation.Conversation),
+    )
+    self.assertEqual(await response.text(), "")
 
 
 if __name__ == "__main__":

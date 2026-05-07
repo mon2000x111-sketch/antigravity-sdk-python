@@ -46,7 +46,7 @@ async def main():
     response = await agent.chat(
         "Remember this: my favorite color is blue."
     )
-    print(f"Agent: {response.text}")
+    print(f"Agent: {await response.text()}")
 
     # Read back the conversation_id assigned by the runtime.
     conversation_id = agent.conversation_id
@@ -64,7 +64,7 @@ async def main():
     response = await agent.chat(
         "What is my favorite color?"
     )
-    print(f"Agent: {response.text}")
+    print(f"Agent: {await response.text()}")
   print("Session 2 ended.")
 
 
