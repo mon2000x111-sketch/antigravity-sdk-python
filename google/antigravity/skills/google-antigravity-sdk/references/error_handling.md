@@ -1,8 +1,10 @@
 <!-- disableFinding(LINK_RELATIVE_G3DOC) -->
 <!-- disableFinding(LINE_OVER_80) -->
-# Error Handling and Debugging in Antigravity SDK
 
-This guide is intended for agents assisting users in troubleshooting their Antigravity agents and making them more robust.
+# Error Handling and Debugging in Google Antigravity SDK
+
+This guide is intended for agents assisting users in troubleshooting their
+Google Antigravity agents and making them more robust.
 
 ## Part 1: Debugging & Troubleshooting
 

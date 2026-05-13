@@ -1,14 +1,15 @@
 <!-- disableFinding(LINK_RELATIVE_G3DOC) -->
 <!-- disableFinding(LINE_OVER_80) -->
-# MCP Integration in Antigravity SDK
+
+# MCP Integration in Google Antigravity SDK
 
 Reference guide for connecting and using Model Context Protocol (MCP) servers in
-the Antigravity SDK.
+the Google Antigravity SDK.
 
 ## Overview
 
 The Model Context Protocol (MCP) allows agents to connect to external servers
-that expose tools, resources, and prompts. The Antigravity SDK supports
+that expose tools, resources, and prompts. The Google Antigravity SDK supports
 integrating MCP servers to extend the capabilities of your custom agents.
 
 For a concrete code example of setting up and using MCP, see
@@ -16,7 +17,7 @@ For a concrete code example of setting up and using MCP, see
 
 ## Configuration Modes
 
-Antigravity SDK supports two main ways to connect to MCP servers:
+Google Antigravity SDK supports two main ways to connect to MCP servers:
 
 1.  **Stdio Transport**: The SDK launches and manages the MCP server process,
     communicating over standard input/output.

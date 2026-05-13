@@ -1,6 +1,6 @@
 # Hooks
 
-Hooks in the Antigravity SDK allow you to intercept and observe various
+Hooks in the Google Antigravity SDK allow you to intercept and observe various
 lifecycle events of the agent, and in some cases, modify data or control
 execution flow.
 

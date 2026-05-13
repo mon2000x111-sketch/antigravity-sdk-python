@@ -3,7 +3,7 @@
 # Observability
 
 This guide covers how to monitor costs and execution behavior of agents built
-with the `antigravity-sdk`.
+with the Google Antigravity SDK.
 
 ## Token Usage Tracking
 

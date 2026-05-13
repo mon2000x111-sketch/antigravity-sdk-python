@@ -1,6 +1,6 @@
-# Antigravity SDK Architecture
+# Google Antigravity SDK Architecture
 
-This document provides a high-level overview of the core concepts in the
+This document provides a high-level overview of the core concepts in the Google
 Antigravity SDK.
 
 The SDK is built on three pillars: **Agent**, **Conversation**, and

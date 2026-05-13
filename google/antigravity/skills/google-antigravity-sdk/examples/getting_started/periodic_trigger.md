@@ -1,8 +1,8 @@
 # Triggers and Periodic Checks
 
-This example demonstrates how to use triggers in the Antigravity SDK. Triggers
-are async functions that react to external events (like timers or file changes)
-and can push messages to the agent.
+This example demonstrates how to use triggers in the Google Antigravity SDK.
+Triggers are async functions that react to external events (like timers or file
+changes) and can push messages to the agent.
 
 ## Code Example
 

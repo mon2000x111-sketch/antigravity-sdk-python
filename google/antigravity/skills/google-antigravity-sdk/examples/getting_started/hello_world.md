@@ -1,7 +1,7 @@
 # Hello World Example
 
 This example demonstrates the most basic chat interaction with an agent using
-the Antigravity SDK.
+the Google Antigravity SDK.
 
 ## Basic Chat
 

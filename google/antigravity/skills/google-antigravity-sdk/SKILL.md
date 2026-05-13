@@ -1,13 +1,14 @@
 ---
 name: google-antigravity-sdk
-description: "Design, implement, and debug autonomous AI agents and multi-agent systems using the Antigravity (AGY) SDK. ACTIVATE this skill when the user wants to create, configure, or orchestrate Antigravity agents."
+description: "Design, implement, and debug autonomous AI agents and multi-agent systems using the Google Antigravity (AGY) SDK. ACTIVATE this skill when the user wants to create, configure, or orchestrate Google Antigravity agents."
 ---
 
-# Antigravity SDK
+# Google Antigravity SDK
 
 ## Installation & Setup
 
-Before proceeding with any Antigravity tasks, ensure the environment is ready:
+Before proceeding with any Google Antigravity tasks, ensure the environment is
+ready:
 
 -   **Verify Applicability**: If operating in an existing codebase, verify that
     using this Python SDK is possible and appropriate for the project.
@@ -34,7 +35,7 @@ relevant information.
 ### References
 
 -   If the user needs to understand the high-level overview and core concepts of
-    the Antigravity SDK (Agent, Conversation, Connection), read
+    the Google Antigravity SDK (Agent, Conversation, Connection), read
     `references/architecture.md`.
 -   If the user needs to perform advanced agent configuration, select
     appropriate models, or understand the critical rules for model identifiers

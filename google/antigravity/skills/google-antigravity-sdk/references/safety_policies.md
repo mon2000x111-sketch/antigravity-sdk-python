@@ -1,13 +1,13 @@
-# Safety Policies in Antigravity SDK
+# Safety Policies in Google Antigravity SDK
 
-Reference guide for configuring access control and safety policies in the
+Reference guide for configuring access control and safety policies in the Google
 Antigravity SDK.
 
 ## Overview
 
-The Antigravity SDK provides a declarative policy system to control which tools
-an agent can execute. Policies are evaluated using a priority-based model to
-ensure safety and prevent unauthorized actions.
+The Google Antigravity SDK provides a declarative policy system to control which
+tools an agent can execute. Policies are evaluated using a priority-based model
+to ensure safety and prevent unauthorized actions.
 
 ## Mandatory Requirement
 

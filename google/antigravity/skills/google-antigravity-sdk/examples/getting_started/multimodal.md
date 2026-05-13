@@ -1,7 +1,7 @@
 # Multimodal Examples
 
 This example demonstrates how to use multimodal inputs (images, documents) and
-outputs (generating images) with the Antigravity SDK.
+outputs (generating images) with the Google Antigravity SDK.
 
 ## Multimodal Input
 

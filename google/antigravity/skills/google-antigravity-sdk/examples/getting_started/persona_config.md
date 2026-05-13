@@ -1,7 +1,7 @@
 # System Instructions and Persona
 
 This example demonstrates how to configure system instructions or persona for an
-agent using the Antigravity SDK. You can either append to the default
+agent using the Google Antigravity SDK. You can either append to the default
 instructions or completely overwrite them.
 
 ## Appending to Instructions (Recommended)

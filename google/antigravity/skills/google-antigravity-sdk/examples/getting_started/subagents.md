@@ -1,7 +1,7 @@
 # Subagents Example
 
 This example demonstrates how an agent can spawn and delegate tasks to
-sub-agents using the Antigravity SDK.
+sub-agents using the Google Antigravity SDK.
 
 ## Spawning a Subagent
 
