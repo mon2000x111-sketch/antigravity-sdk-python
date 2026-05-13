@@ -268,6 +268,17 @@ class Conversation:
       ]
 
   @property
+  def connection(self) -> connection.Connection:
+    """Returns the underlying Connection transport.
+
+    Intended for advanced use cases that need direct transport access.
+    Prefer Conversation or Agent methods for normal interaction —
+    bypassing the Conversation layer skips history tracking and hook
+    dispatch.
+    """
+    return self._connection
+
+  @property
   def is_idle(self) -> bool:
     """Returns True if the conversation is idle and ready for input."""
     return self._connection.is_idle

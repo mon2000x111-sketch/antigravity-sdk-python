@@ -7,9 +7,9 @@ with the `antigravity-sdk`.
 
 ## Token Usage Tracking
 
-You can track token usage across a session using `agent.total_usage`. This
-property returns a `UsageMetadata` object containing cumulative counts for the
-session.
+You can track token usage across a session using
+`agent.conversation.total_usage`. This property returns a `UsageMetadata` object
+containing cumulative counts for the session.
 
 ```python
 from google.antigravity import Agent, LocalAgentConfig
@@ -18,7 +18,7 @@ from google.antigravity import Agent, LocalAgentConfig
 
 async with Agent(config) as agent:
     response = await agent.chat("Hello")
-    usage = agent.total_usage
+    usage = agent.conversation.total_usage
     print(f"Prompt tokens: {usage.prompt_token_count}")
     print(f"Candidates tokens: {usage.candidates_token_count}")
     print(f"Thoughts tokens: {usage.thoughts_token_count}")

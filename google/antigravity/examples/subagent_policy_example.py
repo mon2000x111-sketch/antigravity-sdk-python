@@ -67,9 +67,7 @@ async def main():
     print(f"Agent response:\n{await response.text()}\n")
 
     # Programmatic check of history
-    # pylint: disable=protected-access
-    assert agent._conversation is not None
-    history = agent._conversation.history
+    history = agent.conversation.history
 
     denied_by_policy = False
 

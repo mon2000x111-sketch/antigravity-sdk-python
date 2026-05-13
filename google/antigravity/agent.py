@@ -159,7 +159,7 @@ class Agent:
         self._trigger_runner = await self._exit_stack.enter_async_context(
             trigger_runner.TriggerRunner(
                 triggers=list(self._pending_triggers),
-                connection=self._conversation._connection,
+                connection=self.conversation.connection,
             )
         )
         self._pending_triggers.clear()
@@ -167,7 +167,7 @@ class Agent:
       # Wire ToolContext into ToolRunner so tools can access
       # conversation capabilities (same pattern as TriggerRunner).
       if self._tool_runner:
-        ctx = tool_context.ToolContext(self._conversation._connection)
+        ctx = tool_context.ToolContext(self.conversation.connection)
         self._tool_runner.set_context(ctx)
 
       return self
@@ -208,12 +208,12 @@ class Agent:
     return self._conversation is not None
 
   @property
-  def connection(self) -> connection_module.Connection:
-    """Returns the underlying Connection.
+  def conversation(self) -> conversation.Conversation:
+    """Returns the active Conversation session.
 
-    Intended for advanced use cases that need direct transport access.
-    Prefer Agent methods for normal interaction — bypassing the Agent
-    and Conversation layers skips history tracking and hook dispatch.
+    Use this for advanced session introspection: history, turn count,
+    compaction indices, usage, or direct send/receive_steps control.
+    For most use cases, prefer chat() instead.
 
     Raises:
       RuntimeError: If the agent session has not been started.
@@ -222,7 +222,7 @@ class Agent:
       raise RuntimeError(
           "Agent session not started. Use 'async with Agent(...)'."
       )
-    return self._conversation._connection
+    return self._conversation
 
   @property
   def conversation_id(self) -> str | None:
@@ -235,16 +235,3 @@ class Agent:
     if not self._conversation:
       return None
     return self._conversation.conversation_id or None
-
-  @property
-  def total_usage(self) -> types.UsageMetadata:
-    """Cumulative token usage across all turns in this session.
-
-    Raises:
-      RuntimeError: If the agent session has not been started.
-    """
-    if not self._conversation:
-      raise RuntimeError(
-          "Agent session not started. Use 'async with Agent(...)'."
-      )
-    return self._conversation.total_usage

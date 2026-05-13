@@ -163,7 +163,7 @@ async def disconnect_cleanup() -> None:
     print(f"  {await response.text()}")
 
     # Peek at the subprocess while the connection is still alive.
-    lc = agent.connection
+    lc = agent.conversation.connection
     assert isinstance(lc, local_connection.LocalConnection)
     process = lc._process  # pylint: disable=protected-access
     pid = process.pid
@@ -178,13 +178,12 @@ async def disconnect_cleanup() -> None:
     process.kill()
     raise RuntimeError(f"process {pid} still running after disconnect().")
 
-  # Sending on a disconnected conversation should fail.
   try:
-    await agent._conversation.send("This should fail.")  # pylint: disable=protected-access
-    print("  FAIL: send() succeeded after disconnect.")
-    raise RuntimeError("send() succeeded after disconnect.")
+    await agent.chat("This should fail.")
+    print("  FAIL: chat() succeeded after disconnect.")
+    raise RuntimeError("chat() succeeded after disconnect.")
   except Exception as e:  # pylint: disable=broad-except
-    print(f"  PASS: send() raised {type(e).__name__}.")
+    print(f"  PASS: chat() raised {type(e).__name__}.")
 
 
 # ---------------------------------------------------------------------------

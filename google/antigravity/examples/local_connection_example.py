@@ -170,11 +170,10 @@ async def run():
         print()
 
         if _SHOW_USAGE.value:
-          assert agent._conversation is not None
           _print_telemetry(
               response.usage_metadata,
-              agent.total_usage,
-              agent._conversation.history,
+              agent.conversation.total_usage,
+              agent.conversation.history,
           )
 
       except (KeyboardInterrupt, asyncio.CancelledError, EOFError):

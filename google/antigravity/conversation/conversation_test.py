@@ -620,6 +620,13 @@ class ConversationStateTest(unittest.IsolatedAsyncioTestCase):
 
     self.assertEqual(conv.conversation_id, "")
 
+  async def test_connection_returns_underlying_transport(self):
+    """Verifies connection property returns the injected Connection."""
+    mock_connection = mock.MagicMock(spec=connection.Connection)
+    conv = conversation.Conversation(mock_connection)
+
+    self.assertIs(conv.connection, mock_connection)
+
 
 class ConversationLifecycleTest(unittest.IsolatedAsyncioTestCase):
   """Validates direct delegation of lifecycle methods without hasattr guards."""

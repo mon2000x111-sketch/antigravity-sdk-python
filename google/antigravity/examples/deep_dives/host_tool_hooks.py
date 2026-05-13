@@ -195,13 +195,16 @@ def broken_tool() -> str:
 
 
 async def run_prompt(agent: Agent, prompt: str) -> None:
-  """Sends a prompt and prints the final response."""
+  """Sends a prompt and prints the final response.
+
+  Uses conversation.send() + conversation.receive_steps() to iterate
+  over individual steps, distinguishing parent from subagent responses.
+  """
   print(f"\n{'='*60}")
   print(f"--- Sending: {prompt!r} ---")
   print(f"{'='*60}")
-  assert agent._conversation is not None
-  await agent._conversation.send(prompt)
-  async for step in agent._conversation.receive_steps():
+  await agent.conversation.send(prompt)
+  async for step in agent.conversation.receive_steps():
     if step.is_complete_response:
       cascade_id = getattr(step, "cascade_id", "")
       trajectory_id = getattr(step, "trajectory_id", "")

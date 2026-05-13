@@ -8,6 +8,58 @@ The `conversation` package provides the `Conversation` class, which is the Layer
 
 `Conversation` is the primary interface for power users who need more control than the high-level `Agent` class provides, but don't want to deal with the low-level details of `Connection`.
 
+## Mental Model: Agent vs Conversation
+
+The SDK has three layers. Understanding which layer owns which concern
+prevents confusion:
+
+```
+┌──────────────────────────────────────────────┐
+│  Agent  (Layer 1 — Lifecycle & Config)       │
+│  Owns: config, hooks, triggers, policies,    │
+│        MCP bridges, tool runner, chat()      │
+│                                              │
+│  ┌──────────────────────────────────────────┐│
+│  │  Conversation  (Layer 2 — Session)       ││
+│  │  Owns: history, turn tracking,           ││
+│  │        compaction indices, usage,        ││
+│  │        send(), receive_steps(), chat()   ││
+│  │                                          ││
+│  │  ┌──────────────────────────────────────┐││
+│  │  │  Connection  (Layer 3 — Transport)   │││
+│  │  │  Owns: wire protocol, binary,        │││
+│  │  │        idle/wakeup, disconnect       │││
+│  │  └──────────────────────────────────────┘││
+│  └──────────────────────────────────────────┘│
+└──────────────────────────────────────────────┘
+```
+
+**What lives where:**
+
+| Concern | Owner | Why |
+|:--------|:------|:----|
+| Config, hooks, policies, tools | **Agent** | These are *declarative setup* — they define what the agent can do, not what it has done. |
+| History, turns, usage, compaction | **Conversation** | These are *session state* — they accumulate as the agent interacts. |
+| Wire protocol, process lifecycle | **Connection** | This is *transport plumbing* — how bytes move. |
+
+**Can an Agent have multiple Conversations?**
+
+Today, each `Agent` session (`async with Agent(...)`) creates exactly one
+`Conversation`. To run multiple independent conversations, create multiple
+`Agent` instances (see `multi_conversation_example.py`) or use `Conversation`
+directly with a `ConnectionStrategy`.
+
+**When should I use `agent.conversation`?**
+
+Most users only need `agent.chat()`. Use `agent.conversation` when you
+need:
+
+- **History inspection** — `agent.conversation.history`
+- **Token usage tracking** — `agent.conversation.total_usage`
+- **Step-level streaming** — `agent.conversation.send()` +
+  `agent.conversation.receive_steps()`
+- **Transport access** — `agent.conversation.connection`
+
 Key features:
 - **Step History Accumulation**: It automatically records all `Step` objects received from the connection.
 - **History Limits**: It supports a maximum history size to prevent memory issues in long sessions, discarding oldest steps when the limit is exceeded.

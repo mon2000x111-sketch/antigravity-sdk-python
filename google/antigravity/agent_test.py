@@ -574,12 +574,13 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     with self.assertRaises(RuntimeError):
       await ag.chat("hello")
 
-  async def test_agent_connection_before_start(self):
+  async def test_agent_conversation_before_start(self):
+    """Verifies conversation raises RuntimeError before session starts."""
     ag = agent.Agent(
         local_connection.LocalAgentConfig(system_instructions="test")
     )
     with self.assertRaises(RuntimeError):
-      _ = ag.connection
+      _ = ag.conversation
 
   async def test_agent_is_started_before_start(self):
     """Verifies is_started returns False before session starts."""
@@ -779,24 +780,24 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
       "local.local_connection.LocalConnectionStrategy"
   )
   @mock.patch.object(conversation.Conversation, "create")
-  async def test_agent_connection_after_start(
+  async def test_agent_conversation_after_start(
       self, mock_conv_create, mock_strategy_class
   ):
+    """Verifies conversation returns the Conversation instance after start."""
     mock_strategy_instance = mock.MagicMock()
 
     mock_strategy_instance.stop = mock.AsyncMock()
     mock_strategy_class.return_value = mock_strategy_instance
 
     mock_conversation = mock.MagicMock(spec=conversation.Conversation)
-    mock_conversation._connection = mock.MagicMock()
+    mock_conversation.connection = mock.MagicMock()
     mock_cm = mock.AsyncMock()
     mock_cm.__aenter__.return_value = mock_conversation
     mock_conv_create.return_value = mock_cm
 
     config = local_connection.LocalAgentConfig(system_instructions="test")
     async with agent.Agent(config) as ag:
-      conn = ag.connection
-      self.assertEqual(conn, mock_conversation._connection)
+      self.assertEqual(ag.conversation, mock_conversation)
 
   async def test_agent_aexit_passes_exceptions(self):
     config = local_connection.LocalAgentConfig(system_instructions="test")
@@ -961,25 +962,6 @@ class AgentConfigTest(unittest.TestCase):
     mock_conv.conversation_id = "test-conv-123"
     a._conversation = mock_conv
     self.assertEqual(a.conversation_id, "test-conv-123")
-
-  def test_total_usage_before_start(self):
-    """Verifies total_usage raises RuntimeError before the session starts."""
-    a = agent.Agent(
-        local_connection.LocalAgentConfig(system_instructions="test")
-    )
-    with self.assertRaises(RuntimeError):
-      _ = a.total_usage
-
-  def test_total_usage_proxies_to_conversation(self):
-    """Verifies total_usage returns Conversation.total_usage."""
-    a = agent.Agent(
-        local_connection.LocalAgentConfig(system_instructions="test")
-    )
-    mock_conv = mock.MagicMock()
-    mock_usage = types.UsageMetadata(prompt_token_count=42)
-    mock_conv.total_usage = mock_usage
-    a._conversation = mock_conv
-    self.assertEqual(a.total_usage.prompt_token_count, 42)
 
 
 if __name__ == "__main__":

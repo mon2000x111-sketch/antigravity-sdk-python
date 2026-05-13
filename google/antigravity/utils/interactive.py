@@ -209,8 +209,6 @@ async def run_interactive_loop(agent: agent_module.Agent) -> None:
         "Agent session not started. Use 'async with Agent(...)'."
     )
 
-  assert agent._conversation is not None
-
   agent.register_hook(AskQuestionHook())
   print("Starting interactive loop. Type 'exit' or 'quit' to end.")
   while True:
@@ -223,9 +221,9 @@ async def run_interactive_loop(agent: agent_module.Agent) -> None:
         print("Goodbye!")
         break
 
-      await agent._conversation.send(user_input)
+      await agent.conversation.send(user_input)
 
-      async for step in agent._conversation.receive_steps():
+      async for step in agent.conversation.receive_steps():
         if step.is_complete_response:
           print(f"Agent: {step.content}")
 
