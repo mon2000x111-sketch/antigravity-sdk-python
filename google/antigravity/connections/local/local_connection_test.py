@@ -83,6 +83,58 @@ class LocalConnectionTest(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(steps[0].status, types.StepStatus.ACTIVE)
     self.assertEqual(steps[0].source, types.StepSource.MODEL)
 
+  async def test_receive_steps_system_error(self):
+    harness = self._make_harness()
+    event = localharness_pb2.OutputEvent(
+        step_update=localharness_pb2.StepUpdate(
+            step_index=1,
+            error=localharness_pb2.ActionError(
+                error_message="Fatal system failure",
+                http_code=400,
+            ),
+            state=localharness_pb2.StepUpdate.STATE_ERROR,
+            source=localharness_pb2.StepUpdate.SOURCE_SYSTEM,
+        )
+    )
+
+    await harness.send_event(event)
+    await harness.close_from_harness_side()
+    harness.conn._is_idle.clear()
+
+    # receive_steps should raise AntigravityConnectionError when it
+    # encounters the system error step.
+    with self.assertRaisesRegex(
+        types.AntigravityConnectionError, "Fatal system failure"
+    ):
+      async for _ in harness.conn.receive_steps():
+        pass
+
+  async def test_receive_steps_system_error_401(self):
+    harness = self._make_harness()
+    event = localharness_pb2.OutputEvent(
+        step_update=localharness_pb2.StepUpdate(
+            step_index=1,
+            error=localharness_pb2.ActionError(
+                error_message="Unauthorized access",
+                http_code=401,
+            ),
+            state=localharness_pb2.StepUpdate.STATE_ERROR,
+            source=localharness_pb2.StepUpdate.SOURCE_SYSTEM,
+        )
+    )
+
+    await harness.send_event(event)
+    await harness.close_from_harness_side()
+    harness.conn._is_idle.clear()
+
+    # receive_steps should raise AntigravityConnectionError when it
+    # encounters the system error step.
+    with self.assertRaisesRegex(
+        types.AntigravityConnectionError, "Unauthorized access"
+    ):
+      async for _ in harness.conn.receive_steps():
+        pass
+
   def test_local_connection_step_from_dict(self):
     """Tests that LocalConnectionStep maps fields correctly."""
     step_dict = {

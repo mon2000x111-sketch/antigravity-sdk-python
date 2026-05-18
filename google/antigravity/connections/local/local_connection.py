@@ -224,6 +224,7 @@ class LocalConnectionStep(types.Step):
   cascade_id: str = ""
   trajectory_id: str = ""
   target: str = ""
+  http_code: int = 0
 
   @classmethod
   def from_dict(cls, step_dict: dict[str, Any]) -> "LocalConnectionStep":
@@ -320,6 +321,10 @@ class LocalConnectionStep(types.Step):
               "Failed to parse structured output JSON.", exc_info=True
           )
 
+    error_field = step_dict.get("error", {})
+    error_msg = error_field.get("error_message", "")
+    http_code = error_field.get("http_code", 0)
+
     return cls(
         id=id_str,
         step_index=step_idx,
@@ -333,7 +338,8 @@ class LocalConnectionStep(types.Step):
         thinking=step_dict.get("thinking", ""),
         thinking_delta=step_dict.get("thinking_delta", ""),
         tool_calls=tool_calls,
-        error=step_dict.get("error_message", ""),
+        error=error_msg,
+        http_code=http_code,
         is_complete_response=is_complete_response,
         target=step_dict.get("target", ""),
         structured_output=structured_output,
@@ -557,6 +563,28 @@ class LocalConnection(connection.Connection):
 
         step_obj = cast(LocalConnectionStep, step_obj)
         yield step_obj
+
+        # Detect platform-level errors (source=SYSTEM) and propagate them.
+        # We only raise exceptions for known fatal HTTP codes:
+        # - 400 Bad Request
+        # - 401 Unauthenticated (API key missing/invalid format)
+        # - 403 Permission Denied (invalid API key)
+        # Other system errors (e.g. 429 Quota Exceeded after retries fail,
+        # or 5xx) are logged as warnings to allow potential
+        # application-level recovery.
+        if (
+            step_obj.status == types.StepStatus.ERROR
+            and step_obj.source == types.StepSource.SYSTEM
+        ):
+          http_code = getattr(step_obj, "http_code", 0)
+          if http_code in (400, 401, 403):
+            raise types.AntigravityConnectionError(
+                step_obj.error or "System error occurred."
+            )
+          else:
+            logging.warning(
+                "System step error (HTTP %s): %s", http_code, step_obj.error
+            )
 
         is_from_model = step_obj.source == types.StepSource.MODEL
         is_done = step_obj.status == types.StepStatus.DONE
