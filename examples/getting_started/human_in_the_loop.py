@@ -16,6 +16,9 @@
 
 This example demonstrates how an agent can pause execution to ask the user
 for input or clarification using the `AskQuestionHook`.
+
+To run:
+  python human_in_the_loop.py
 """
 
 import asyncio
@@ -42,7 +45,7 @@ async def main() -> None:
     # We give the agent an ambiguous prompt to encourage it to ask for
     # clarification.
     prompt = "I want to search for a file."
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     response = await my_agent.chat(prompt)
 

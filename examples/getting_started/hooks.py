@@ -17,6 +17,9 @@
 This example shows how to use decorators to register hooks for various
 lifecycle events, including session, turn, tool, interaction, and compaction.
 
+To run:
+  python hooks.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. Session lifecycle hooks (on_session_start, on_session_end) fire during
@@ -41,12 +44,12 @@ from google.antigravity.hooks import hooks
 
 @hooks.on_session_start
 async def on_start() -> None:
-  print("\n[Hook] Session started")
+  print("\n  [Hook] Session started")
 
 
 @hooks.on_session_end
 async def on_end() -> None:
-  print("\n[Hook] Session ended")
+  print("\n  [Hook] Session ended")
 
 
 # -----------------------------------------------------------------------------
@@ -56,13 +59,13 @@ async def on_end() -> None:
 
 @hooks.pre_turn
 async def pre_turn(data: str) -> types.HookResult:
-  print(f"\n[Hook] Pre-turn: Intercepted prompt -> {data!r}")
+  print(f"\n  [Hook] Pre-turn: Intercepted prompt -> {data!r}")
   return types.HookResult(allow=True)
 
 
 @hooks.post_turn
 async def post_turn(data: str) -> None:
-  print(f"\n[Hook] Post-turn: Final response -> {data!r}")
+  print(f"\n  [Hook] Post-turn: Final response -> {data!r}")
 
 
 # -----------------------------------------------------------------------------
@@ -72,18 +75,18 @@ async def post_turn(data: str) -> None:
 
 @hooks.pre_tool_call_decide
 async def pre_tool(data: types.ToolCall) -> types.HookResult:
-  print(f"\n[Hook] Pre-tool-call: Approving tool -> {data.name}")
+  print(f"\n  [Hook] Pre-tool-call: Approving tool -> {data.name}")
   return types.HookResult(allow=True)
 
 
 @hooks.post_tool_call
 async def post_tool(data: Any) -> None:
-  print(f"\n[Hook] Post-tool-call: Result -> {data!r}")
+  print(f"\n  [Hook] Post-tool-call: Result -> {data!r}")
 
 
 @hooks.on_tool_error
 async def on_error(data: Exception) -> None:
-  print(f"\n[Hook] Tool error: {data!r}")
+  print(f"\n  [Hook] Tool error: {data!r}")
   return None  # Let the error propagate
 
 
@@ -97,7 +100,7 @@ async def on_interact(
     data: types.AskQuestionInteractionSpec,
 ) -> types.QuestionHookResult:
   """Handles user interaction requests."""
-  print(f"\n[Hook] Interaction requested: {data.questions!r}")
+  print(f"\n  [Hook] Interaction requested: {data.questions!r}")
   # Auto-select the first option if available, or provide a default answer.
   responses = [
       types.QuestionResponse(selected_option_ids=[q.options[0].id])
@@ -110,7 +113,7 @@ async def on_interact(
 
 @hooks.on_compaction
 async def on_compact(data) -> None:
-  print(f"\n[Hook] Context compaction occurred at step: {data!r}")
+  print(f"\n  [Hook] Context compaction occurred at step: {data!r}")
 
 
 # -----------------------------------------------------------------------------
@@ -150,41 +153,41 @@ async def main() -> None:
   )
 
   async with Agent(config) as my_agent:
-    print("--- Starting Interaction ---")
+    print("  --- Starting Interaction ---")
 
     # 1. Trigger Turn Hooks
-    print("\n--- Prompt 1: Simple Chat ---")
+    print("\n  --- Prompt 1: Simple Chat ---")
     response = await my_agent.chat("Say 'Hello World!'")
-    print("Agent Response: ", end="")
+    print("  Agent Response: ", end="")
     async for chunk in response:
       print(chunk, end="")
     print()
 
     # 2. Trigger Tool Hooks
-    print("\n--- Prompt 2: Tool Usage ---")
+    print("\n  --- Prompt 2: Tool Usage ---")
     response = await my_agent.chat("Please greet Alice using the greet tool.")
-    print("Agent Response: ", end="")
+    print("  Agent Response: ", end="")
     async for chunk in response:
       print(chunk, end="")
     print()
 
     # 3. Trigger Tool Error Hook
-    print("\n--- Prompt 3: Tool Error ---")
+    print("\n  --- Prompt 3: Tool Error ---")
     response = await my_agent.chat("Please call the broken_tool tool.")
-    print("Agent Response: ", end="")
+    print("  Agent Response: ", end="")
     async for chunk in response:
       print(chunk, end="")
     print()
 
     # 4. Trigger Interaction Hook (Simulated by asking a question)
-    print("\n--- Prompt 4: Interaction ---")
+    print("\n  --- Prompt 4: Interaction ---")
     response = await my_agent.chat("Ask me a multiple-choice trivia question.")
-    print("Agent Response: ", end="")
+    print("  Agent Response: ", end="")
     async for chunk in response:
       print(chunk, end="")
     print()
 
-    print("\n--- Finished Interaction ---")
+    print("\n  --- Finished Interaction ---")
 
 
 if __name__ == "__main__":

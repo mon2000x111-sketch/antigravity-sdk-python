@@ -19,6 +19,9 @@ This example shows:
 2. How to define a stateful tool using ToolContext to maintain state
    across turns.
 
+To run:
+  python custom_tools.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent calls the lookup_fruit_sku tool and returns an SKU value
@@ -101,16 +104,16 @@ async def main() -> None:
   )
 
   async with Agent(config) as my_agent:
-    print("=== Custom Tools Demo ===")
+    print("  === Custom Tools Demo ===")
 
     # Test simple tool
     prompt1 = "What is the SKU for apples? We need to order more."
-    print(f"\nUser: {prompt1}")
+    print(f"\n  User: {prompt1}")
     response1 = await my_agent.chat(prompt1)
-    print(f"Agent: {await response1.text()}")
+    print(f"  Agent: {await response1.text()}")
 
     # Test stateful tool
-    print("\n=== Stateful Tool (Fruit Counter) Demo ===")
+    print("\n  === Stateful Tool (Fruit Counter) Demo ===")
 
     turns = [
         "I have 5 apples.",
@@ -119,9 +122,9 @@ async def main() -> None:
     ]
 
     for user_input in turns:
-      print(f"\nUser: {user_input}")
+      print(f"\n  User: {user_input}")
       response = await my_agent.chat(user_input)
-      print(f"Agent: {await response.text()}")
+      print(f"  Agent: {await response.text()}")
 
 
 if __name__ == "__main__":

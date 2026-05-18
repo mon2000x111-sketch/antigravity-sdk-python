@@ -15,10 +15,10 @@
 """Example demonstrating tool call policies in Google Antigravity SDK.
 
 This example shows how to secure an agent using declarative tool call policies.
-By default, ``LocalAgentConfig`` uses ``policy.confirm_run_command()`` which denies
-``run_command`` and allows all other tools. To lock down further for production
-or untrusted environments, developers can override this default with explicit
-safety policies. To open up full access (including shell), pass
+By default, ``LocalAgentConfig`` uses ``policy.confirm_run_command()`` which
+denies ``run_command`` and allows all other tools. To lock down further for
+production or untrusted environments, developers can override this default with
+explicit safety policies. To open up full access (including shell), pass
 ``policies=[policy.allow_all()]``.
 
 Policies operate at the runtime decision layer: tools remain visible in the
@@ -31,6 +31,9 @@ Demonstrates:
 2. Specific Denylist rules (e.g., blocking dangerous shell commands like `rm`).
 3. Specific Allowlist rules (e.g., allowing only specific safe commands).
 4. Interactive confirmation rules using `policy.ask_user()`.
+
+To run:
+  python policies.py
 
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
@@ -83,14 +86,16 @@ def programmatic_approval_handler(tool_call: types.ToolCall) -> bool:
   Returns:
     True to approve execution, False to deny.
   """
-  print(f"\n[ASK_USER Handler] Intercepted request for tool: {tool_call.name}")
-  print(f"[ASK_USER Handler] Target arguments: {tool_call.args}")
-  print("[ASK_USER Handler] Simulating user review... Decision: DENY.")
+  print(
+      f"\n  [ASK_USER Handler] Intercepted request for tool: {tool_call.name}"
+  )
+  print(f"  [ASK_USER Handler] Target arguments: {tool_call.args}")
+  print("  [ASK_USER Handler] Simulating user review... Decision: DENY.")
   return False
 
 
 async def main() -> None:
-  print("=== Tool Call Policies Demo ===")
+  print("  === Tool Call Policies Demo ===")
 
   # Configure policies using the recommended "Deny by Default" posture.
   # Priority order: Specific Deny > Specific Ask > Specific Allow >
@@ -130,28 +135,28 @@ async def main() -> None:
   config = LocalAgentConfig(policies=policies)
 
   async with Agent(config) as my_agent:
-    print("\nChatting with agent...")
+    print("\n  Chatting with agent...")
 
     # Try a safe command (should be allowed)
     prompt1 = "List the files in the current directory."
-    print(f"\nUser: {prompt1}")
+    print(f"\n  User: {prompt1}")
     response1 = await my_agent.chat(prompt1)
-    print(f"Agent: {await response1.text()}")
+    print(f"  Agent: {await response1.text()}")
 
     # Try a dangerous command (should be denied by policy)
     prompt2 = "Delete all files using rm -rf."
-    print(f"\nUser: {prompt2}")
+    print(f"\n  User: {prompt2}")
     response2 = await my_agent.chat(prompt2)
-    print(f"Agent: {await response2.text()}")
+    print(f"  Agent: {await response2.text()}")
 
     # Try creating a critical file (triggers programmatic ask_user handler)
     prompt3 = (
         "Create a new configuration file named production.key with content"
         " 'debug=true'."
     )
-    print(f"\nUser: {prompt3}")
+    print(f"\n  User: {prompt3}")
     response3 = await my_agent.chat(prompt3)
-    print(f"Agent: {await response3.text()}")
+    print(f"  Agent: {await response3.text()}")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,9 @@ This example demonstrates:
 2. Catching specific SDK exceptions in application code using try...except
    blocks.
 
+To run:
+  python error_handler.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent calls the exploding_tool, which raises a ValueError.
@@ -71,7 +74,7 @@ async def main() -> None:
   # unconfigured capabilities) and errors.
   logging.basicConfig(level=logging.WARNING)
 
-  print("🔌 Error Handling Example\n")
+  print("  🔌 Error Handling Example\n")
 
   # Create the agent configuration with the tool and hook.
   config = LocalAgentConfig(
@@ -82,29 +85,29 @@ async def main() -> None:
   async with Agent(config) as my_agent:
     # Ask the agent to use the tool that we know will fail.
     prompt = "Use the exploding_tool with input 'test data'."
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     # Catch SDK exceptions in application code.
     try:
       response = await my_agent.chat(prompt)
       response_text = await response.text()
-      print(f"Agent: {response_text}")
+      print(f"  Agent: {response_text}")
 
     except types.AntigravityValidationError as e:
       # Triggered when input validation fails.
       # Common cause: Missing GEMINI_API_KEY or invalid configuration
       # parameters.
-      print(f"\n[App Error] Validation failed: {e}")
+      print(f"\n  [App Error] Validation failed: {e}")
 
     except types.AntigravityConnectionError as e:
       # Triggered when connection issues occur.
       # Common cause: Backend harness process crashes or WebSocket connection
       # drops.
-      print(f"\n[App Error] Connection failed: {e}")
+      print(f"\n  [App Error] Connection failed: {e}")
 
     except Exception as e:  # pylint: disable=broad-except
       # Catch-all for other unexpected errors.
-      print(f"\n[App Error] Unexpected error: {e}")
+      print(f"\n  [App Error] Unexpected error: {e}")
 
 
 if __name__ == "__main__":

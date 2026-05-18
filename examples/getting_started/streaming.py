@@ -14,6 +14,9 @@
 
 """Example demonstrating streaming responses and thoughts in Google Antigravity SDK.
 
+To run:
+  python streaming.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent produces non-empty streamed thought/reasoning content.
@@ -35,21 +38,21 @@ async def main() -> None:
         " have no body, but I come alive with wind. What am I? Explain your"
         " reasoning."
     )
-    print(f"User: {prompt}\n")
+    print(f"  User: {prompt}\n")
 
     response = await my_agent.chat(prompt)
 
-    print("Agent (Streaming thoughts):")
-    print("-------------------------------------------------------")
+    print("  Agent (Streaming thoughts):")
+    print("  -------------------------------------------------------")
     async for thought in response.thoughts:
       print(thought, end="", flush=True)
-    print("\n-------------------------------------------------------\n")
+    print("\n  -------------------------------------------------------\n")
 
-    print("Agent (Streaming final answer):")
-    print("-------------------------------------------------------")
+    print("  Agent (Streaming final answer):")
+    print("  -------------------------------------------------------")
     async for token in response:
       print(token, end="", flush=True)
-    print("\n-------------------------------------------------------\n")
+    print("\n  -------------------------------------------------------\n")
 
     # Note: Advanced users can also use `response.tool_calls` to stream tool
     # calls as they arrive, or `response.chunks` to get a unified raw stream

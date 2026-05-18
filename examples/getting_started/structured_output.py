@@ -34,6 +34,9 @@ In this example, the agent uses a custom mock tool to retrieve raw unstructured
 meeting notes and distills them into a strongly-typed `MeetingSummary` object
 containing assignee, task, and deadline fields.
 
+To run:
+  python structured_output.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent calls the fetch_unstructured_meeting_notes tool to retrieve
@@ -87,7 +90,7 @@ async def fetch_unstructured_meeting_notes(meeting_id: str) -> str:
 
 async def main() -> None:
   """Runs the structured output example."""
-  print("--- Starting main ---")
+  print("  --- Starting main ---")
   config = LocalAgentConfig(
       tools=[fetch_unstructured_meeting_notes],
       response_schema=MeetingSummary,
@@ -101,22 +104,22 @@ async def main() -> None:
         " 'task', and 'deadline'."
     )
 
-    print("\nSending prompt to agent...")
+    print("\n  Sending prompt to agent...")
     response = await meeting_agent.chat(prompt)
 
-    print("\nExtracting structured meeting action items...")
+    print("\n  Extracting structured meeting action items...")
 
     data = await response.structured_output()
     if not data:
-      print("\nFailed to extract structured summary natively.")
-      print(f"Final Text Response: {await response.text()}")
+      print("\n  Failed to extract structured summary natively.")
+      print(f"  Final Text Response: {await response.text()}")
       return
 
-    print("\n=== Structured Meeting Action Items ===")
+    print("\n  === Structured Meeting Action Items ===")
     for item in data.get("action_items", []):
-      print(f"- Assignee: {item.get('assignee')}")
-      print(f"  Task:     {item.get('task')}")
-      print(f"  Deadline: {item.get('deadline')}\n")
+      print(f"  - Assignee: {item.get('assignee')}")
+      print(f"    Task:     {item.get('task')}")
+      print(f"    Deadline: {item.get('deadline')}\n")
 
 
 if __name__ == "__main__":

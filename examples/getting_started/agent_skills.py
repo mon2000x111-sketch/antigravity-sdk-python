@@ -17,6 +17,9 @@
 This example demonstrates how to use `skills_paths` in `LocalAgentConfig`
 to point to a directory containing skills and how the agent can recognize them.
 
+To run:
+  python agent_skills.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. "Loading skills from:" appears in the output, confirming the skill path
@@ -39,7 +42,7 @@ async def main() -> None:
       os.path.join(script_dir, "../../skills/google-antigravity-sdk")
   )
 
-  print(f"Loading skills from: {skill_path}")
+  print(f"  Loading skills from: {skill_path}")
 
   # Configure the agent with the skills path.
   config = LocalAgentConfig(skills_paths=[skill_path])
@@ -47,13 +50,13 @@ async def main() -> None:
   async with Agent(config) as my_agent:
     # Ask the agent what skills it has.
     prompt = "What available skills do you have?"
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     response = await my_agent.chat(prompt)
 
     # Await the full aggregated text response.
     response_text = await response.text()
-    print(f"Agent: {response_text}")
+    print(f"  Agent: {response_text}")
 
 
 if __name__ == "__main__":

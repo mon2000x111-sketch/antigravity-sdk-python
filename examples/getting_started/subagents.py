@@ -22,6 +22,9 @@ Subagents are valuable for scoping context usage. By delegating a heavy research
 task to a subagent, the main agent avoids filling its own context window with
 all the raw documents, receiving only the synthesized result.
 
+To run:
+  python subagents.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent spawns a subagent to research the examples directory.
@@ -47,25 +50,25 @@ async def log_pre_tool(data: types.ToolCall) -> types.HookResult:
 
   if data.name == types.BuiltinTools.START_SUBAGENT.value:
     _subagent_active = True
-    print("\n--- 🤖 [Hook] Spawning Subagent ---")
-    print(f"Arguments: {data.args}\n")
+    print("\n  --- 🤖 [Hook] Spawning Subagent ---")
+    print(f"  Arguments: {data.args}\n")
   else:
-    indent = "  " if _subagent_active else ""
+    indent = "    " if _subagent_active else "  "
     print(f"{indent}- [Start]: {data.name} (ID: {data.id})", flush=True)
   return types.HookResult(allow=True)
 
 
 @hooks.post_tool_call
-async def log_post_tool(data: Any):
+async def log_post_tool(data: Any) -> None:
   """Logs tool results."""
   global _subagent_active
 
   if data.name == types.BuiltinTools.START_SUBAGENT.value:
     _subagent_active = False
-    print("\n--- 🤖 [Hook] Subagent Finished ---")
-    print(f"Result: {data.result}\n")
+    print("\n  --- 🤖 [Hook] Subagent Finished ---")
+    print(f"  Result: {data.result}\n")
   else:
-    indent = "  " if _subagent_active else ""
+    indent = "    " if _subagent_active else "  "
     print(f"{indent}- [Done]: {data.name} (ID: {data.id}) ✅", flush=True)
 
 
@@ -87,14 +90,14 @@ async def main() -> None:
         " subagent, and then generate a lesson plan for me to learn more based"
         " on its findings."
     )
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     response = await my_agent.chat(prompt)
 
     # Await the full aggregated text response. This includes both the
     # subagent's output and the main agent's regular response text.
     response_text = await response.text()
-    print(f"\nAgent:\n{response_text}")
+    print(f"\n  Agent:\n{response_text}")
 
 
 if __name__ == "__main__":

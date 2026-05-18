@@ -16,6 +16,9 @@
 
 This example demonstrates how to connect an agent to external MCP servers
 using stdio, SSE, and Streamable HTTP transports.
+
+To run:
+  python mcp_tools.py
 """
 
 import asyncio
@@ -26,9 +29,9 @@ from google.antigravity import Agent, LocalAgentConfig
 from google.antigravity.examples.resources import mcp_server
 
 
-async def mcp_stdio(mcp_server_path: str):
+async def mcp_stdio(mcp_server_path: str) -> None:
   """Showcases the Stdio transport."""
-  print("\n--- Showcasing Stdio Transport ---")
+  print("\n  --- Showcasing Stdio Transport ---")
   config = LocalAgentConfig(
       mcp_servers=[
           types.McpStdioServer(
@@ -40,14 +43,14 @@ async def mcp_stdio(mcp_server_path: str):
 
   async with Agent(config) as my_agent:
     prompt = "Use the pirate_multiply tool to multiply 5 and 7."
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
     response = await my_agent.chat(prompt)
-    print(f"Agent: {await response.text()}")
+    print(f"  Agent: {await response.text()}")
 
 
-async def mcp_sse():
+async def mcp_sse() -> None:
   """Showcases the SSE transport."""
-  print("\n--- Showcasing SSE Transport ---")
+  print("\n  --- Showcasing SSE Transport ---")
   async with mcp_server.run("sse") as port:
     config = LocalAgentConfig(
         mcp_servers=[types.McpSseServer(url=f"http://localhost:{port}/sse")]
@@ -55,14 +58,14 @@ async def mcp_sse():
 
     async with Agent(config) as my_agent:
       prompt = "Use the pirate_multiply tool to multiply 5 and 7."
-      print(f"User: {prompt}")
+      print(f"  User: {prompt}")
       response = await my_agent.chat(prompt)
-      print(f"Agent: {await response.text()}")
+      print(f"  Agent: {await response.text()}")
 
 
-async def mcp_http():
+async def mcp_http() -> None:
   """Showcases the Streamable HTTP transport."""
-  print("\n--- Showcasing Streamable HTTP Transport ---")
+  print("\n  --- Showcasing Streamable HTTP Transport ---")
   async with mcp_server.run("streamable-http") as port:
     config = LocalAgentConfig(
         mcp_servers=[
@@ -72,9 +75,9 @@ async def mcp_http():
 
     async with Agent(config) as my_agent:
       prompt = "Use the pirate_multiply tool to multiply 5 and 7."
-      print(f"User: {prompt}")
+      print(f"  User: {prompt}")
       response = await my_agent.chat(prompt)
-      print(f"Agent: {await response.text()}")
+      print(f"  Agent: {await response.text()}")
 
 
 async def main() -> None:
@@ -85,7 +88,7 @@ async def main() -> None:
 
   # Verify script exists
   if not os.path.exists(mcp_server_path):
-    print(f"Error: MCP server script not found at {mcp_server_path}")
+    print(f"  Error: MCP server script not found at {mcp_server_path}")
     return
 
   await mcp_stdio(mcp_server_path)

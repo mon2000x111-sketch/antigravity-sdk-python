@@ -17,6 +17,9 @@
 This example shows how to configure an agent with a custom application data
 directory (`app_data_dir`) to control where the agent stores artifacts, scratch
 files, and uploaded media.
+
+To run:
+  python app_data_dir_override.py
 """
 
 import asyncio
@@ -36,7 +39,7 @@ async def main() -> None:
   """
   # Create a temporary directory for the custom application data storage
   custom_app_data = pathlib.Path(tempfile.mkdtemp(prefix="agent_appdata_"))
-  print(f"Custom App Data Dir: {custom_app_data}\n")
+  print(f"  Custom App Data Dir: {custom_app_data}\n")
 
   # Initialize the agent config with our custom app_data_dir override
   config = LocalAgentConfig(app_data_dir=str(custom_app_data))  # pytype: disable=wrong-keyword-args
@@ -44,16 +47,17 @@ async def main() -> None:
   # Start the agent and ask it to create an artifact
   async with Agent(config) as my_agent:
     print(
-        f"Agent Session Started. Conversation ID: {my_agent.conversation_id}\n"
+        "  Agent Session Started. Conversation ID:"
+        f" {my_agent.conversation_id}\n"
     )
 
     prompt = (
         "Please create an artifact file named 'python_best_practices.md'"
         " summarizing Python best practices."
     )
-    print(f"User:  {prompt}")
+    print(f"  User:  {prompt}")
     response = await my_agent.chat(prompt)
-    print(f"Agent: {await response.text()}\n")
+    print(f"  Agent: {await response.text()}\n")
 
     # Verify that the artifact was successfully stored in our custom
     # app_data_dir
@@ -65,14 +69,14 @@ async def main() -> None:
         / "python_best_practices.md"
     )
 
-    print(f"Checking artifact location: {expected_artifact_path}")
+    print(f"  Checking artifact location: {expected_artifact_path}")
     if expected_artifact_path.exists():
       print(
-          "\nSUCCESS: Verified artifact successfully stored in custom"
+          "\n  SUCCESS: Verified artifact successfully stored in custom"
           " app_data_dir!"
       )
     else:
-      print("\nWARNING: Artifact was not found in custom app_data_dir.")
+      print("\n  WARNING: Artifact was not found in custom app_data_dir.")
 
 
 if __name__ == "__main__":

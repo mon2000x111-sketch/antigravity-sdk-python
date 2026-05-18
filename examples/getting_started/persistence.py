@@ -24,6 +24,9 @@ Demonstrates:
 3. Session 2 resuming by providing the saved `conversation_id` and verifying
    recall, confirming that the prior trajectory was restored.
 
+To run:
+  python persistence.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. Session 1 establishes context and retrieves a conversation_id.
@@ -39,25 +42,25 @@ from google.antigravity import Agent, LocalAgentConfig
 
 async def main() -> None:
   save_dir = tempfile.mkdtemp(prefix="agent_session_")
-  print(f"Save directory: {save_dir}")
+  print(f"  Save directory: {save_dir}")
 
-  print("\n=== Session 1: establishing context ===")
+  print("\n  === Session 1: establishing context ===")
 
   # Specify `save_dir` to ensure conversation history and artifacts are
   # persisted to disk.
   config1 = LocalAgentConfig(save_dir=save_dir)
   async with Agent(config1) as my_agent1:
     prompt1 = "Remember this: my favorite color is blue."
-    print(f"User: {prompt1}")
+    print(f"  User: {prompt1}")
     response1 = await my_agent1.chat(prompt1)
-    print(f"Agent: {await response1.text()}")
+    print(f"  Agent: {await response1.text()}")
 
     # Read back the conversation_id assigned by the runtime.
     conversation_id = my_agent1.conversation_id
-    print(f"Assigned conversation ID: {conversation_id}")
-  print("Session 1 ended.\n")
+    print(f"  Assigned conversation ID: {conversation_id}")
+  print("  Session 1 ended.\n")
 
-  print("=== Session 2: resuming and verifying recall ===")
+  print("  === Session 2: resuming and verifying recall ===")
   # By providing the exact same `save_dir` and the prior `conversation_id`,
   # the new agent instance automatically restores the previous conversation
   # history and context.
@@ -67,10 +70,10 @@ async def main() -> None:
   )
   async with Agent(config2) as my_agent2:
     prompt2 = "What is my favorite color?"
-    print(f"User: {prompt2}")
+    print(f"  User: {prompt2}")
     response2 = await my_agent2.chat(prompt2)
-    print(f"Agent: {await response2.text()}")
-  print("Session 2 ended.")
+    print(f"  Agent: {await response2.text()}")
+  print("  Session 2 ended.")
 
 
 if __name__ == "__main__":

@@ -36,6 +36,9 @@ This example demonstrates:
 2. Using CustomSystemInstructions to provide a full structured system prompt
    when complete control is needed.
 
+To run:
+  python persona_config.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. In the templated case, the agent reviews the code snippet and
@@ -62,10 +65,10 @@ def check_style_guide(language: str) -> str:
   return "No specific rules found."
 
 
-async def run_templated_example():
+async def run_templated_example() -> None:
   """Demonstrates using TemplatedSystemInstructions to override identity and add sections."""
 
-  print("=== Templated System Instructions Example ===")
+  print("  === Templated System Instructions Example ===")
 
   # Override the Identity (Persona)
   identity = (
@@ -108,9 +111,9 @@ async def run_templated_example():
 
   async with Agent(config) as my_agent:
     prompt = "Review this Python code: `def MY_FUNCTION(X): return X*2`"
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
     response = await my_agent.chat(prompt)
-    print(f"Agent: {await response.text()}\n")
+    print(f"  Agent: {await response.text()}\n")
 
 
 def _build_skills_instructions(skills_paths: list[str]) -> str:
@@ -143,7 +146,7 @@ def _build_skills_instructions(skills_paths: list[str]) -> str:
   return instructions
 
 
-async def run_custom_example():
+async def run_custom_example() -> None:
   """Demonstrates using CustomSystemInstructions with a full structured prompt.
 
   Overriding the system prompt completely removes the SDK's default scaffolding
@@ -155,7 +158,7 @@ async def run_custom_example():
   in Python when complete, raw control over the System Prompt is needed.
   """
 
-  print("=== Custom System Instructions Example ===")
+  print("  === Custom System Instructions Example ===")
 
   # Static Identity/Persona
   identity_text = """
@@ -258,12 +261,12 @@ You have access to the `check_style_guide` tool. When reviewing Python code, alw
 
   async with Agent(config) as my_agent:
     prompt = "Review this Python code: `def foo(x): return x+1`"
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
     response = await my_agent.chat(prompt)
-    print(f"Agent: {await response.text()}\n")
+    print(f"  Agent: {await response.text()}\n")
 
 
-async def main():
+async def main() -> None:
   """Main function to run all examples."""
 
   await run_templated_example()

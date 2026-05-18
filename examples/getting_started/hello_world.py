@@ -19,6 +19,9 @@ This example demonstrates the simplest way to interact with an agent:
 - Using the Agent context manager.
 - Sending a simple prompt and awaiting the full text response.
 
+To run:
+  python hello_world.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent produces a non-empty text response.
@@ -37,13 +40,13 @@ async def main() -> None:
 
   async with Agent(config) as my_agent:
     prompt = "Say 'Hello World!'"
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     response = await my_agent.chat(prompt)
 
     # Await the full aggregated text response.
     response_text = await response.text()
-    print(f"Agent: {response_text}")
+    print(f"  Agent: {response_text}")
 
 
 if __name__ == "__main__":

@@ -24,6 +24,9 @@ assistants or system automation tools — you can opt in by passing
    ``allow_all()`` grants the agent unrestricted tool access, including
    arbitrary shell command execution. Only use this in trusted environments.
 
+To run:
+  python autonomous_shell.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The agent produces a non-empty text response.
@@ -46,11 +49,11 @@ async def main() -> None:
 
   async with Agent(config) as agent:
     prompt = "Run 'echo Hello from the shell!' and show me the output."
-    print(f"User: {prompt}")
+    print(f"  User: {prompt}")
 
     response = await agent.chat(prompt)
     response_text = await response.text()
-    print(f"Agent: {response_text}")
+    print(f"  Agent: {response_text}")
 
 
 if __name__ == "__main__":

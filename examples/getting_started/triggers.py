@@ -24,6 +24,9 @@ This example demonstrates:
 2. Custom Triggers (using `@triggers.trigger` decorator) - Simulating CI/CD
    Webhook listeners.
 
+To run:
+  python triggers.py
+
 Criteria for correct script performance:
   1. The script exits cleanly with return code 0 (no unhandled exceptions).
   2. The periodic trigger fires and sends a system alert to the agent.
@@ -62,7 +65,7 @@ async def _poll_queue_callback(ctx: TriggerContext) -> None:
     # We use explicit print statements with flush=True so that output appears
     # in real-time in the terminal even while the main thread is sleeping.
     print(
-        "\n[TRIGGER EVENT] Alert! New ticket detected in the queue...",
+        "\n  [TRIGGER EVENT] Alert! New ticket detected in the queue...",
         flush=True,
     )
 
@@ -76,8 +79,8 @@ async def _poll_queue_callback(ctx: TriggerContext) -> None:
 
 async def _run_periodic_trigger_example() -> None:
   """Demonstrates a periodic trigger polling an SRE support queue."""
-  print("=== Support Queue Trigger Demo ===")
-  print("Creating agent and starting session...")
+  print("  === Support Queue Trigger Demo ===")
+  print("  Creating agent and starting session...")
 
   global _ticket_counter
   global _standby_active
@@ -104,9 +107,9 @@ async def _run_periodic_trigger_example() -> None:
         "Your task will be to standby and simply let me know if there are any "
         "critical tickets received."
     )
-    print(f"\nUser: {prompt1}")
+    print(f"\n  User: {prompt1}")
     response1 = await my_agent.chat(prompt1)
-    print(f"Agent: {await response1.text()}")
+    print(f"  Agent: {await response1.text()}")
 
     # Turn 1 is resolved. We now enable the standby trigger.
     _standby_active = True
@@ -114,7 +117,7 @@ async def _run_periodic_trigger_example() -> None:
     # Sleep to let the background task execute.
     # The TriggerRunner runs the callback concurrently in an asyncio task.
     print(
-        "\nSleeping for 5 seconds. A new ticket will be simulated "
+        "\n  Sleeping for 5 seconds. A new ticket will be simulated "
         "in the background..."
     )
     await asyncio.sleep(5)
@@ -123,11 +126,11 @@ async def _run_periodic_trigger_example() -> None:
     # Because the trigger sent an event, it was appended to the conversation
     # history. The agent will recall it reactively.
     prompt2 = "I'm back. Did anything critical come in while I was working?"
-    print(f"\nUser: {prompt2}")
+    print(f"\n  User: {prompt2}")
     response2 = await my_agent.chat(prompt2)
-    print(f"Agent: {await response2.text()}")
+    print(f"  Agent: {await response2.text()}")
 
-    print("\nEnding session. Background triggers will stop automatically.")
+    print("\n  Ending session. Background triggers will stop automatically.")
 
 
 # ==============================================================================
@@ -144,7 +147,7 @@ _webhook_active = False
 async def _webhook_listener(ctx: TriggerContext) -> None:
   """Simulates a background push-based CI/CD webhook listener."""
 
-  print("\n[WEBHOOK TRIGGER] Custom Webhook listener started...", flush=True)
+  print("\n  [WEBHOOK TRIGGER] Custom Webhook listener started...", flush=True)
 
   # The developer is responsible for their own loop and interval/compaction
   # logic.
@@ -160,7 +163,7 @@ async def _webhook_listener(ctx: TriggerContext) -> None:
     # On the third tick inside standby, push a simulated build failure alert.
     if tick == 3:
       print(
-          "\n[WEBHOOK TRIGGER] Event received: 'AppBuild-42' status FAILED.",
+          "\n  [WEBHOOK TRIGGER] Event received: 'AppBuild-42' status FAILED.",
           flush=True,
       )
       await ctx.send(
@@ -171,8 +174,8 @@ async def _webhook_listener(ctx: TriggerContext) -> None:
 
 async def _run_custom_trigger_example() -> None:
   """Demonstrates a custom trigger simulating a background webhook listener."""
-  print("=== Custom Webhook Trigger Demo ===")
-  print("Creating agent and starting session...")
+  print("  === Custom Webhook Trigger Demo ===")
+  print("  Creating agent and starting session...")
 
   global _webhook_active
   _webhook_active = False
@@ -194,26 +197,26 @@ async def _run_custom_trigger_example() -> None:
         "Your task will be to standby and simply let me know if there are any "
         "critical pipeline webhook alerts received."
     )
-    print(f"\nUser: {prompt1}")
+    print(f"\n  User: {prompt1}")
     response1 = await my_agent.chat(prompt1)
-    print(f"Agent: {await response1.text()}")
+    print(f"  Agent: {await response1.text()}")
 
     # Turn 1 is resolved. We now enable the webhook trigger.
     _webhook_active = True
 
     print(
-        "\nSleeping for 5 seconds. A pipeline failure will be simulated "
+        "\n  Sleeping for 5 seconds. A pipeline failure will be simulated "
         "in the background..."
     )
     await asyncio.sleep(5)
 
     # Turn 2: Ask for updates.
     prompt2 = "I'm back. Any updates on my builds?"
-    print(f"\nUser: {prompt2}")
+    print(f"\n  User: {prompt2}")
     response2 = await my_agent.chat(prompt2)
-    print(f"Agent: {await response2.text()}")
+    print(f"  Agent: {await response2.text()}")
 
-    print("\nEnding session. Background triggers will stop automatically.")
+    print("\n  Ending session. Background triggers will stop automatically.")
 
 
 # ==============================================================================
